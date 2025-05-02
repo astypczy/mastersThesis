@@ -1,12 +1,19 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { MigrationService, TestResult } from './services/migration.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  standalone: true,
+  templateUrl: './app.component.html'
 })
 export class AppComponent {
-  title = 'frontend';
+  results: TestResult[] = [];
+
+  constructor(private migrationService: MigrationService) { }
+
+  runTests() {
+    this.migrationService.runTests().subscribe(data => {
+      this.results = data;
+    });
+  }
 }
