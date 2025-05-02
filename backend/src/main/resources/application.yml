@@ -1,0 +1,30 @@
+# backend/src/main/resources/application.yml
+
+# Ustawienia wspolne (np. polaczenie do bazy)
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mastersThesis
+    username: postgres
+    password: postgres
+
+# Profil 'flyway': wlacz Flyway, wylacz Liquibase
+  config:
+    activate:
+      on-profile: flyway
+  liquibase:
+    enabled: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration   # katalog ze skryptami Flyway
+    baseline-on-migrate: true
+
+
+## Profil 'liquibase': wlacz Liquibase, wylacz Flyway
+#  config:
+#    activate:
+#      on-profile: liquibase
+#  flyway:
+#    enabled: false
+#  liquibase:
+#    enabled: true
+#    change-log: classpath:db/changelog/db.changelog-master.xml
