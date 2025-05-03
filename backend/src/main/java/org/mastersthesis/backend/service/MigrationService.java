@@ -19,25 +19,37 @@ import java.lang.InterruptedException;
 
 @Service
 public class MigrationService {
-    @Autowired
     private DataSource dataSource;
-
     private JdbcTemplate jdbcTemplate;
 
-    public List<TestResult> runAllTests() {
+    @Autowired
+    public MigrationService(DataSource dataSource, JdbcTemplate jdbcTemplate) {
+        this.dataSource   = dataSource;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+    public List<TestResult> runTestsFlyway() {
         List<TestResult> results = new ArrayList<>();
         // Scenariusz 1 (zmiana kolumny)
         results.add(runFlywayScenario("rename_column"));
+        // Scenariusz 2 (duża tabela)
+        results.add(runFlywayScenario("big_table"));
+        return results;
+    }
+    public List<TestResult> runTestsLiquibase() {
+        List<TestResult> results = new ArrayList<>();
+        // Scenariusz 1 (zmiana kolumny)
         results.add(runLiquibaseScenario("rename_column"));
 
         // Scenariusz 2 (duża tabela)
-        results.add(runFlywayScenario("big_table"));
         results.add(runLiquibaseScenario("big_table"));
 
+        return results;
+    }
+
+    public int resetDB(){
         // Przywrócenie stanu bazy (opcjonalnie drop/create tabeli)
         resetDatabaseSchema();
-
-        return results;
+        return 1;
     }
 
     private void resetDatabaseSchema() {
