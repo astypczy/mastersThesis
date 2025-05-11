@@ -5,7 +5,7 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
-    <changeSet id="1-add-new-name" author="dev" context="rename">
+    <changeSet id="1-add-new-name" author="dev" context="1">
         <preConditions onFail="MARK_RAN">
             <not><columnExists tableName="person" columnName="new_name"/></not>
         </preConditions>
@@ -17,32 +17,44 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="2-copy-data" author="dev" context="rename">
+    <changeSet id="2-copy-data" author="dev" context="2">
         <sql>UPDATE person SET new_name = legacy_name;</sql>
         <rollback>
             <!-- nic do zrobienia – zmiany cofnie drop/new_name -->
         </rollback>
     </changeSet>
 
-    <changeSet id="3-create-function" author="dev" context="rename">
-        <sql>
+    <changeSet id="3-create-function" author="dev" context="3">
+        <sql splitStatements="false" endDelimiter="$$">
+    <![CDATA[
             CREATE OR REPLACE FUNCTION person_name_sync() RETURNS trigger AS $$
             BEGIN
-        IF TG_OP = 'INSERT' THEN
-          IF NEW.new_name IS NULL THEN NEW.new_name := NEW.legacy_name; ELSIF NEW.legacy_name IS NULL THEN NEW.legacy_name := NEW.new_name; END IF;
+      IF TG_OP = 'INSERT' THEN
+        IF NEW.new_name IS NULL THEN
+          NEW.new_name := NEW.legacy_name;
+        ELSIF NEW.legacy_name IS NULL THEN
+          NEW.legacy_name := NEW.new_name;
+            END IF;
             RETURN NEW;
             END IF;
-        IF NEW.legacy_name IS DISTINCT FROM OLD.legacy_name THEN NEW.new_name := NEW.legacy_name;
-        ELSIF NEW.new_name IS DISTINCT FROM OLD.new_name THEN NEW.legacy_name := NEW.new_name;
+
+      IF NEW.legacy_name IS DISTINCT FROM OLD.legacy_name THEN
+        NEW.new_name := NEW.legacy_name;
+      ELSIF NEW.new_name IS DISTINCT FROM OLD.new_name THEN
+        NEW.legacy_name := NEW.new_name;
             END IF;
             RETURN NEW;
             END;
-      $$ LANGUAGE plpgsql;
-        </sql>
-        <rollback><sql>DROP FUNCTION IF EXISTS person_name_sync()</sql></rollback>
+    $$ LANGUAGE plpgsql;
+            ]]>
+  </sql>
+        <rollback>
+            <sql>DROP FUNCTION IF EXISTS person_name_sync()</sql>
+        </rollback>
     </changeSet>
 
-    <changeSet id="4-create-trigger" author="dev" context="rename">
+
+    <changeSet id="4-create-trigger" author="dev" context="4">
         <sql>
             DROP TRIGGER IF EXISTS person_name_sync_trigger ON person;
             CREATE TRIGGER person_name_sync_trigger
@@ -52,7 +64,7 @@
         <rollback><sql>DROP TRIGGER IF EXISTS person_name_sync_trigger ON person;</sql></rollback>
     </changeSet>
 
-    <changeSet id="5-drop-legacy" author="dev" context="rename">
+    <changeSet id="5-drop-legacy" author="dev" context="5">
         <preConditions onFail="MARK_RAN">
             <columnExists tableName="person" columnName="legacy_name"/>
         </preConditions>
@@ -62,7 +74,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="create-big-table" author="dev" context="big">
+    <changeSet id="create-big-table" author="dev" context="6">
         <createTable tableName="big_table">
             <column name="id" type="SERIAL">
                 <constraints primaryKey="true"/>

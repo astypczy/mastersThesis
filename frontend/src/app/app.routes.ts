@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
-import {AppComponent} from './app.component';
+import {TablePreviewComponent} from './components/table-preview/table-preview.component';
+import {MainComponent} from './components/main/main.component';
 
 export const routes: Routes = [
-  {path: '', component: AppComponent}
+  {path: '', component: MainComponent},
+  { path: 'preview', component: TablePreviewComponent }
 ];
 

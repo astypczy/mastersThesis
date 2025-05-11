@@ -4,12 +4,16 @@ import liquibase.Liquibase;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
+import liquibase.exception.DatabaseException;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.util.*;
 import javax.sql.DataSource;
@@ -35,19 +39,26 @@ public class MigrationService {
         results.add(runFlywayScenario("big_table"));
         return results;
     }
-    public List<TestResult> runTestsLiquibase() {
-        List<TestResult> results = new ArrayList<>();
-        // Scenariusz 1 (zmiana kolumny)
-        results.add(runLiquibaseScenario("rename_column"));
-
-        // Scenariusz 2 (duża tabela)
-        results.add(runLiquibaseScenario("big_table"));
-
-        return results;
+    public List<TestResult> runTestsLiquibase_1() {
+        return List.of(runLiquibaseScenario("1"));
+    }
+    public List<TestResult> runTestsLiquibase_2() {
+        return List.of(runLiquibaseScenario("2"));
+    }
+    public List<TestResult> runTestsLiquibase_3() {
+        return List.of(runLiquibaseScenario("3"));
+    }
+    public List<TestResult> runTestsLiquibase_4() {
+        return List.of(runLiquibaseScenario("4"));
+    }
+    public List<TestResult> runTestsLiquibase_5() {
+        return List.of(runLiquibaseScenario("5"));
+    }
+    public List<TestResult> runTestsLiquibase_6() {
+        return List.of(runLiquibaseScenario("6"));
     }
 
     public int resetDB(){
-        // Przywrócenie stanu bazy (opcjonalnie drop/create tabeli)
         resetDatabaseSchema();
         return 1;
     }
@@ -101,37 +112,40 @@ public class MigrationService {
         }
     }
 
-    // Uruchamia migrację Liquibase dla danego scenariusza
-    private TestResult runLiquibaseScenario(String scenario) {
+    public TestResult runLiquibaseScenario(String context) {
         try (Connection conn = dataSource.getConnection()) {
-            Database database = DatabaseFactory.getInstance()
-                    .findCorrectDatabaseImplementation(new JdbcConnection(conn));
-            Liquibase liquibase = new Liquibase("db/changelog/db.changelog-master.xml",
-                    new ClassLoaderResourceAccessor(), database);
+            Liquibase lb = createLiquibase(conn);
             long start = System.nanoTime();
-            // Używamy kontekstu (np. "rename" lub "big") żeby wykonać tylko część zmian
-            String contexts = scenario.equals("rename_column") ? "rename" : "big";
-            liquibase.update(contexts);
+            lb.update(context);
             long duration = System.nanoTime() - start;
-
-            // Ręczny rollback
-            if (scenario.equals("rename_column")) {
-                long rstart = System.nanoTime();
-                jdbcTemplate.execute("ALTER TABLE person ADD COLUMN old_name VARCHAR(100)");
-                jdbcTemplate.execute("ALTER TABLE person DROP COLUMN new_name");
-                long rollbackTime = System.nanoTime() - rstart;
-                return new TestResult("Liquibase", scenario, duration, rollbackTime, 0, countLiquibaseLines(scenario), 0, 0);
-            } else {
-                long rstart = System.nanoTime();
-                jdbcTemplate.execute("DROP TABLE big_table");
-                long rollbackTime = System.nanoTime() - rstart;
-                return new TestResult("Liquibase", scenario, duration, rollbackTime, 0, countLiquibaseLines(scenario), 0, 0);
-            }
+            return new TestResult("Liquibase", context, duration, 0, 0, countLiquibaseLines(context), 0, 0);
         } catch (Exception e) {
-            // Obsługa błędów migracji
-            return new TestResult("Liquibase", scenario, 0, 0, -1, 0, 0, 0);
+            return new TestResult("Liquibase", context, 0, 0, -1, 0, 0, 0);
         }
     }
+
+    private Liquibase createLiquibase(Connection conn) throws DatabaseException {
+        Database db = DatabaseFactory.getInstance()
+                .findCorrectDatabaseImplementation(new JdbcConnection(conn));
+        return new Liquibase(
+                "db/changelog/db.changelog-master.xml",
+                new ClassLoaderResourceAccessor(),
+                db
+        );
+    }
+
+    public TestResult runLiquibaseRollback(String context) {
+        try (Connection conn = dataSource.getConnection()) {
+            Liquibase lb = createLiquibase(conn);
+            long start = System.nanoTime();
+            lb.rollback(1, context);
+            long rollbackTime = System.nanoTime() - start;
+            return new TestResult("Liquibase-Rollback", context, 0, rollbackTime, 0, countLiquibaseLines(context), 0, 0);
+        } catch (Exception e) {
+            return new TestResult("Liquibase-Rollback", context, 0, 0, -1, 0, 0, 0);
+        }
+    }
+
 
     // Liczy liczbę linii w skryptach Flyway dla danego scenariusza
     private int countFlywayLines(String scenario) {
@@ -139,9 +153,39 @@ public class MigrationService {
         // (w przykładzie zwracamy wartość przykładową lub obliczamy np. za pomocą Files.readAllLines)
         return scenario.equals("rename_column") ? 3 : 1002;
     }
-    // Liczy linie w skryptach Liquibase dla danego scenariusza
-    private int countLiquibaseLines(String scenario) {
-        return scenario.equals("rename_column") ? 3 : 1005;
+
+    private int countLiquibaseLines(String context) {
+        String beginMarker = "<changeSet";    // początek bloku
+        String ctxAttr    = "context=\"" + context + "\"";
+        String endMarker  = "</changeSet>";
+
+        try (InputStream is = getClass().getClassLoader()
+                .getResourceAsStream("db/changelog/db.changelog-master.xml");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+
+            boolean inBlock = false;
+            int count = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (!inBlock) {
+                    // szukamy otwarcia changeSet z właściwym context
+                    if (line.contains(beginMarker) && line.contains(ctxAttr)) {
+                        inBlock = true;
+                    }
+                } else {
+                    // zakończenie bloku?
+                    if (line.contains(endMarker)) {
+                        break;
+                    }
+                    // zliczamy każdą linię SQL/CDATA wewnątrz
+                    count++;
+                }
+            }
+            return count;
+        } catch (Exception e) {
+            // w razie problemu zwróć 0 lub -1
+            return 0;
+        }
     }
 }
 

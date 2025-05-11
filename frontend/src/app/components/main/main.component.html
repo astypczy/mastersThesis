@@ -1,0 +1,37 @@
+<h1>Wyniki testu migracji</h1>
+<button (click)="runTestsFlyway()">Uruchom testy Flyway</button>
+<button (click)="runTestsLiquibase()">Uruchom testy Liquibase</button>
+<button (click)="resetDB()">Zresetuj bazę dancyh</button>
+<button routerLink="/preview">Podgląd danych z bazy</button>
+<table *ngIf="resultsFlyway.length">
+  <h1>Wyniki Flyway</h1>
+  <tr>
+    <th>Narzędzie</th><th>Scenariusz</th><th>Czas migracji (ns)</th><th>Czas rollback (ns)</th><th>Exit code</th><th>Linie skryptu</th><th>CPU (%)</th><th>Pamięć (B)</th>
+  </tr>
+  <tr *ngFor="let r of resultsFlyway">
+    <td>{{r.tool}}</td>
+    <td>{{r.scenario}}</td>
+    <td>{{r.migrationTimeNs}}</td>
+    <td>{{r.rollbackTimeNs}}</td>
+    <td>{{r.exitCode}}</td>
+    <td>{{r.scriptLines}}</td>
+    <td>{{r.cpuUsage}}</td>
+    <td>{{r.memoryUsage}}</td>
+  </tr>
+</table>
+<table *ngIf="resultsLiquibase.length">
+  <h1>Wyniki Liquibase</h1>
+  <tr>
+    <th>Narzędzie</th><th>Scenariusz</th><th>Czas migracji (ns)</th><th>Czas rollback (ns)</th><th>Exit code</th><th>Linie skryptu</th><th>CPU (%)</th><th>Pamięć (B)</th>
+  </tr>
+  <tr *ngFor="let r of resultsLiquibase">
+    <td>{{r.tool}}</td>
+    <td>{{r.scenario}}</td>
+    <td>{{r.migrationTimeNs}}</td>
+    <td>{{r.rollbackTimeNs}}</td>
+    <td>{{r.exitCode}}</td>
+    <td>{{r.scriptLines}}</td>
+    <td>{{r.cpuUsage}}</td>
+    <td>{{r.memoryUsage}}</td>
+  </tr>
+</table>

@@ -1,0 +1,22 @@
+<h2>Podgląd danych z bazy</h2>
+
+<button routerLink="..">Wróć do poprzedniej strony</button>
+<div *ngIf="loading">Ładowanie danych…</div>
+<div *ngIf="errorMessage">{{ errorMessage }}</div>
+
+<div *ngFor="let table of Object.keys(tablesData)">
+  <h3>{{ table }}</h3>
+  <table border="1" *ngIf="tablesData[table].length > 0; else noData">
+    <thead>
+    <tr>
+      <th *ngFor="let col of Object.keys(tablesData[table][0])">{{ col }}</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let row of tablesData[table]">
+      <td *ngFor="let col of Object.keys(row)">{{ row[col] }}</td>
+    </tr>
+    </tbody>
+  </table>
+  <ng-template #noData><p>Brak danych w tabeli.</p></ng-template>
+</div>

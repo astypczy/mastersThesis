@@ -28,4 +28,8 @@ export class MigrationService {
   resetDB(): Observable<number> {
     return this.http.get<number>(`${this.apiUrl}/api/run-tests/reset`);
   }
+  getTablePreviews(): Observable<Record<string, any[]>> {
+    return this.http.get<Record<string, any[]>>('/api/preview');
+  }
+
 }
