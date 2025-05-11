@@ -13,6 +13,9 @@ print("Start...")
 cur.execute("DROP TABLE IF EXISTS orders CASCADE")
 cur.execute("DROP TABLE IF EXISTS address CASCADE")
 cur.execute("DROP TABLE IF EXISTS person CASCADE")
+cur.execute("DROP TABLE IF EXISTS databasechangelog CASCADE")
+cur.execute("DROP TABLE IF EXISTS databasechangeloglock CASCADE")
+cur.execute("DROP TABLE IF EXISTS flyway_schema_history CASCADE")
 
 cur.execute("""
     CREATE TABLE person (

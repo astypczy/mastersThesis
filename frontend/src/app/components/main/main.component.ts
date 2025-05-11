@@ -4,6 +4,7 @@ import { ToastrService } from 'ngx-toastr';
 
 import {RouterLink, RouterOutlet} from '@angular/router';
 import {MigrationService, TestResult} from '../../services/migration.service';
+import {FormsModule} from '@angular/forms';
 
 @Component({
   selector: 'app-root',
@@ -11,7 +12,7 @@ import {MigrationService, TestResult} from '../../services/migration.service';
   imports: [
     CommonModule,
     RouterLink,
-    RouterOutlet
+    FormsModule
   ],
   templateUrl: './main.component.html'
 })
@@ -19,6 +20,10 @@ export class MainComponent {
   resultsFlyway: TestResult[]    = [];
   resultsLiquibase: TestResult[] = [];
   resetStatus: number | null     = null;
+  rollbackContext = 1;
+  rollbackResult?: TestResult;
+  scenario1_iter_lb = 1;
+  scenario2_iter_lb = 1;
 
   constructor(
     private migrationService: MigrationService,
@@ -31,21 +36,21 @@ export class MainComponent {
     });
   }
 
-  runTestsLiquibase() {
-    this.migrationService.runTestsLiquibase().subscribe(data => {
+  runTestsLiquibaseS1() {
+    this.migrationService.runTestsLiquibaseS1().subscribe(data => {
       this.resultsLiquibase = data;
     });
   }
 
   resetDB() {
-    this.toastr.info('Resetowanie bazy danych…', 'Proszę czekać');
+    this.toastr.info('Resetowanie bazy danych…', 'Proszę czekać', {timeOut: 10000});
     console.log('Resetowanie bazy danych…');
     this.migrationService.resetDB().subscribe({
       next: status => {
         this.resetStatus = status;
         this.resultsFlyway = [];
         this.resultsLiquibase = [];
-        this.toastr.success('Baza danych została zresetowana', 'Sukces');
+        this.toastr.success('Baza danych została zresetowana', 'Sukces', {timeOut: 3000});
         console.log('Baza danych została zresetowana');
       },
       error: err => {
@@ -53,6 +58,41 @@ export class MainComponent {
         this.toastr.error('Nie udało się zresetować bazy', 'Błąd');
         console.log('Nie udało się zresetować bazy');
       }
+    });
+  }
+  runLiquibaseStep(step: number) {
+    console.log('Frontend: wywołuję Liquibase step', step);
+    this.toastr.info('Liquibase: Wykonuję krok nr ' + step, 'W toku ...')
+    this.migrationService.runTestsLiquibaseStep(step)
+      .subscribe(res => {
+        this.resultsLiquibase = res;
+        console.log('Frontend: odpowiedź Liquibase step', res);
+        this.toastr.success('Liquibase: Wykonano krok nr ' + step, 'Sukces');
+      });
+  }
+
+  runLiquibaseRollback(context: number) {
+    this.migrationService.runLiquibaseRollback(context).subscribe(res => {
+      this.rollbackResult = res;
+    });
+  }
+  runLiquibaseScenario1_Iterations(iter: number) {
+    console.log('Frontend: Scen. 1. Liquibase: ', iter);
+    this.toastr.info('Liquibase: Scen. 1. Liquibase ' + iter, 'W toku ...')
+    this.migrationService.runLiquibaseScenario1_Iterations(iter).subscribe(data => {
+      this.resultsLiquibase = data;
+      console.log('Frontend: Scen. 1. Liquibase step', data);
+      this.toastr.success('Liquibase: Scen. 1. Liquibase: ' + iter + ' iteracji', 'Sukces');
+    });
+  }
+
+  runLiquibaseScenario2_Iterations(iter: number) {
+    console.log('Frontend: Scen. 2. Liquibase: ', iter);
+    this.toastr.info('Liquibase: Scen. 2. Liquibase ' + iter, 'W toku ...')
+    this.migrationService.runLiquibaseScenario2_Iterations(iter).subscribe(data => {
+      this.resultsLiquibase = data;
+      console.log('Frontend: Scen. 2. Liquibase step', data);
+      this.toastr.success('Liquibase: Scen. 2. Liquibase: ' + iter + ' iteracji', 'Sukces');
     });
   }
 }

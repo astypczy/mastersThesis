@@ -6,7 +6,7 @@
 
 <div *ngFor="let table of Object.keys(tablesData)">
   <h3>{{ table }}</h3>
-  <table border="1" *ngIf="tablesData[table].length > 0; else noData">
+  <table class="table table-bordered" *ngIf="tablesData[table].length > 0; else noData">
     <thead>
     <tr>
       <th *ngFor="let col of Object.keys(tablesData[table][0])">{{ col }}</th>

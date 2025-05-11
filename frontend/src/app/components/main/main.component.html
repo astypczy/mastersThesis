@@ -1,37 +1,92 @@
 <h1>Wyniki testu migracji</h1>
-<button (click)="runTestsFlyway()">Uruchom testy Flyway</button>
-<button (click)="runTestsLiquibase()">Uruchom testy Liquibase</button>
-<button (click)="resetDB()">Zresetuj bazę dancyh</button>
-<button routerLink="/preview">Podgląd danych z bazy</button>
-<table *ngIf="resultsFlyway.length">
-  <h1>Wyniki Flyway</h1>
-  <tr>
-    <th>Narzędzie</th><th>Scenariusz</th><th>Czas migracji (ns)</th><th>Czas rollback (ns)</th><th>Exit code</th><th>Linie skryptu</th><th>CPU (%)</th><th>Pamięć (B)</th>
-  </tr>
-  <tr *ngFor="let r of resultsFlyway">
-    <td>{{r.tool}}</td>
-    <td>{{r.scenario}}</td>
-    <td>{{r.migrationTimeNs}}</td>
-    <td>{{r.rollbackTimeNs}}</td>
-    <td>{{r.exitCode}}</td>
-    <td>{{r.scriptLines}}</td>
-    <td>{{r.cpuUsage}}</td>
-    <td>{{r.memoryUsage}}</td>
-  </tr>
-</table>
-<table *ngIf="resultsLiquibase.length">
-  <h1>Wyniki Liquibase</h1>
-  <tr>
-    <th>Narzędzie</th><th>Scenariusz</th><th>Czas migracji (ns)</th><th>Czas rollback (ns)</th><th>Exit code</th><th>Linie skryptu</th><th>CPU (%)</th><th>Pamięć (B)</th>
-  </tr>
-  <tr *ngFor="let r of resultsLiquibase">
-    <td>{{r.tool}}</td>
-    <td>{{r.scenario}}</td>
-    <td>{{r.migrationTimeNs}}</td>
-    <td>{{r.rollbackTimeNs}}</td>
-    <td>{{r.exitCode}}</td>
-    <td>{{r.scriptLines}}</td>
-    <td>{{r.cpuUsage}}</td>
-    <td>{{r.memoryUsage}}</td>
-  </tr>
-</table>
+
+<div class="actions">
+  <button (click)="runTestsFlyway()">Uruchom testy Flyway</button>
+  <button (click)="resetDB()">Zresetuj bazę danych</button>
+  <button routerLink="/preview">Podgląd danych z bazy</button>
+</div>
+
+<hr>
+
+<section>
+  <h2>Liquibase – pojedyncze kroki</h2>
+  <div class="liquibase-scenarios" >
+    <button (click)="runTestsLiquibaseS1()">Uruchom testy Liquibase - Scenariusz 1.</button>
+    <button (click)="runLiquibaseStep(6)">Uruchom testy Liquibase - Scenariusz 2.</button>
+  </div>
+  <div class="liquibase-scenario1-iterations">
+    <label>Wpisz liczbe iteracji 1. scenariusza:</label>
+    <input id="liquibase-scenario1-iterations-n" type="number" min="1" [(ngModel)]="scenario1_iter_lb" />
+
+    <button (click)="runLiquibaseScenario1_Iterations(scenario1_iter_lb)">
+      Wykonaj scenariusz 1. {{ scenario1_iter_lb }} razy
+    </button>
+  </div>
+  <div class="liquibase-scenario2-iterations">
+    <label>Wpisz liczbe iteracji 2. scenariusza:</label>
+    <input id="liquibase-scenario2-iterations-n" type="number" min="1" [(ngModel)]="scenario2_iter_lb" />
+
+    <button (click)="runLiquibaseScenario2_Iterations(scenario2_iter_lb)">
+      Wykonaj scenariusz 2. {{ scenario2_iter_lb }} razy
+    </button>
+  </div>
+  <div class="liquibase-buttons">
+    <button *ngFor="let i of [1,2,3,4,5,6]" (click)="runLiquibaseStep(i)">
+      Kontekst {{ i }}
+    </button>
+  </div>
+
+  <table *ngIf="resultsLiquibase.length" class="table table-bordered">
+    <caption>Wyniki Liquibase</caption>
+    <thead>
+    <tr>
+      <th>Kontekst</th><th>Czas migracji (ns)</th><th>Czas rollback (ns)</th>
+      <th>Exit code</th><th>Linie skryptu</th><th>CPU (%)</th><th>Pamięć (B)</th><th>Success Rate (%)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr *ngFor="let r of resultsLiquibase">
+      <td>{{ r.scenario }}</td>
+      <td>{{ r.migrationTimeNs }}</td>
+      <td>{{ r.rollbackTimeNs }}</td>
+      <td>{{ r.exitCode }}</td>
+      <td>{{ r.scriptLines }}</td>
+      <td>{{ r.cpuUsage }}</td>
+      <td>{{ r.memoryUsage }}</td>
+      <td>{{ r.successRate }}</td>
+    </tr>
+    </tbody>
+  </table>
+</section>
+
+<hr>
+
+<section>
+  <h2>Rollback Liquibase</h2>
+  <label for="rollback-context">Wpisz kontekst (1–6):</label>
+  <input id="rollback-context" type="number" min="1" max="6" [(ngModel)]="rollbackContext" />
+
+  <button (click)="runLiquibaseRollback(rollbackContext)">
+    Wykonaj rollback kontekstu {{ rollbackContext }}
+  </button>
+
+
+  <div *ngIf="rollbackResult">
+    <h3>Wynik rollbacku</h3>
+    <table class="table">
+      <thead>
+      <tr>
+        <th>Kontekst</th><th>Czas rollback (ns)</th><th>Exit code</th><th>Linie skryptu</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+        <td>{{ rollbackResult.scenario }}</td>
+        <td>{{ rollbackResult.rollbackTimeNs }}</td>
+        <td>{{ rollbackResult.exitCode }}</td>
+        <td>{{ rollbackResult.scriptLines }}</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

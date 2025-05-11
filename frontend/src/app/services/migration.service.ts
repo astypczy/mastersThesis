@@ -11,6 +11,7 @@ export interface TestResult {
   scriptLines: number;
   cpuUsage: number;
   memoryUsage: number;
+  successRate?: number;
 }
 
 @Injectable({
@@ -22,8 +23,8 @@ export class MigrationService {
   runTestsFlyway(): Observable<TestResult[]> {
     return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway`);
   }
-  runTestsLiquibase(): Observable<TestResult[]> {
-    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase`);
+  runTestsLiquibaseS1(): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/scenario1`);
   }
   resetDB(): Observable<number> {
     return this.http.get<number>(`${this.apiUrl}/api/run-tests/reset`);
@@ -32,4 +33,19 @@ export class MigrationService {
     return this.http.get<Record<string, any[]>>('/api/preview');
   }
 
+  runTestsLiquibaseStep(step: number): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/${step}`);
+  }
+  runLiquibaseRollback(context: number): Observable<TestResult> {
+    return this.http.get<TestResult>(`${this.apiUrl}/api/run-tests/Liquibase/rollback/${context}`);
+  }
+
+  runLiquibaseScenario1_Iterations(iter: number): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/scenario1/${iter}`);
+  }
+
+  runLiquibaseScenario2_Iterations(iter: number): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/6/${iter}`);
+  }
 }
+

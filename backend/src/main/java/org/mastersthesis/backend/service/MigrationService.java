@@ -39,24 +39,6 @@ public class MigrationService {
         results.add(runFlywayScenario("big_table"));
         return results;
     }
-    public List<TestResult> runTestsLiquibase_1() {
-        return List.of(runLiquibaseScenario("1"));
-    }
-    public List<TestResult> runTestsLiquibase_2() {
-        return List.of(runLiquibaseScenario("2"));
-    }
-    public List<TestResult> runTestsLiquibase_3() {
-        return List.of(runLiquibaseScenario("3"));
-    }
-    public List<TestResult> runTestsLiquibase_4() {
-        return List.of(runLiquibaseScenario("4"));
-    }
-    public List<TestResult> runTestsLiquibase_5() {
-        return List.of(runLiquibaseScenario("5"));
-    }
-    public List<TestResult> runTestsLiquibase_6() {
-        return List.of(runLiquibaseScenario("6"));
-    }
 
     public int resetDB(){
         resetDatabaseSchema();
@@ -111,15 +93,27 @@ public class MigrationService {
             return new TestResult("Flyway", scenario, duration, rollbackTime, 0, countFlywayLines(scenario), 0, 0);
         }
     }
-
     public TestResult runLiquibaseScenario(String context) {
         try (Connection conn = dataSource.getConnection()) {
             Liquibase lb = createLiquibase(conn);
+            System.out.println(">>> Liquibase.update context=" + context);
+
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+
             long start = System.nanoTime();
             lb.update(context);
             long duration = System.nanoTime() - start;
-            return new TestResult("Liquibase", context, duration, 0, 0, countLiquibaseLines(context), 0, 0);
+
+            monitor.stop();
+            Thread.sleep(200);
+
+            double avgCpu = monitor.getAverageCpu();
+            long avgMemory = monitor.getAverageMemory();
+
+            return new TestResult("Liquibase", context, duration, 0, 0, countLiquibaseLines(context), avgCpu, avgMemory);
         } catch (Exception e) {
+            e.printStackTrace();
             return new TestResult("Liquibase", context, 0, 0, -1, 0, 0, 0);
         }
     }
@@ -137,10 +131,19 @@ public class MigrationService {
     public TestResult runLiquibaseRollback(String context) {
         try (Connection conn = dataSource.getConnection()) {
             Liquibase lb = createLiquibase(conn);
+
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
             long start = System.nanoTime();
             lb.rollback(1, context);
             long rollbackTime = System.nanoTime() - start;
-            return new TestResult("Liquibase-Rollback", context, 0, rollbackTime, 0, countLiquibaseLines(context), 0, 0);
+            monitor.stop();
+            Thread.sleep(200);
+
+            double avgCpu = monitor.getAverageCpu();
+            long avgMemory = monitor.getAverageMemory();
+
+            return new TestResult("Liquibase-Rollback", context, 0, rollbackTime, 0, countLiquibaseLines(context), avgCpu, avgMemory);
         } catch (Exception e) {
             return new TestResult("Liquibase-Rollback", context, 0, 0, -1, 0, 0, 0);
         }
@@ -155,7 +158,7 @@ public class MigrationService {
     }
 
     private int countLiquibaseLines(String context) {
-        String beginMarker = "<changeSet";    // początek bloku
+        String beginMarker = "<changeSet";
         String ctxAttr    = "context=\"" + context + "\"";
         String endMarker  = "</changeSet>";
 
@@ -168,24 +171,181 @@ public class MigrationService {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!inBlock) {
-                    // szukamy otwarcia changeSet z właściwym context
                     if (line.contains(beginMarker) && line.contains(ctxAttr)) {
                         inBlock = true;
                     }
                 } else {
-                    // zakończenie bloku?
                     if (line.contains(endMarker)) {
                         break;
                     }
-                    // zliczamy każdą linię SQL/CDATA wewnątrz
                     count++;
                 }
             }
             return count;
         } catch (Exception e) {
-            // w razie problemu zwróć 0 lub -1
             return 0;
         }
+    }
+
+    public TestResult runLiquibaseScenario1() {
+        List<String> contexts = List.of("1", "2", "3", "4", "5");
+        List<String> contextsRB = List.of("5", "4", "3", "2", "1");
+        long totalMigrationTime = 0;
+        long totalRollbackTime  = 0;
+
+        try (Connection conn = dataSource.getConnection()) {
+            Liquibase lb = createLiquibase(conn);
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+
+            for (String ctx : contexts) {
+                long start = System.nanoTime();
+                lb.update(ctx);
+                totalMigrationTime += System.nanoTime() - start;
+            }
+
+            for (String ctx : contextsRB) {
+                long rstart = System.nanoTime();
+                lb.rollback(1, ctx);
+                totalRollbackTime += System.nanoTime() - rstart;
+            }
+
+            monitor.stop();
+            Thread.sleep(200);
+
+            double avgCpu = monitor.getAverageCpu();
+            long avgMemory = monitor.getAverageMemory();
+
+            int totalLines = 0;
+            for (String ctx : contexts) {
+                totalLines += countLiquibaseLines(ctx);
+            }
+
+            return new TestResult("Liquibase-Group1-5", "1-5", totalMigrationTime, totalRollbackTime,  0, totalLines, avgCpu,  avgMemory
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new TestResult("Liquibase-Group1-5", "1-5", 0, 0, -1, 0, 0, 0);
+        }
+    }
+
+    public TestResult runLiquibaseScenario2() {
+        long totalMigrationTime = 0;
+        long totalRollbackTime  = 0;
+
+        try (Connection conn = dataSource.getConnection()) {
+            Liquibase lb = createLiquibase(conn);
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+
+            long start = System.nanoTime();
+            lb.update("6");
+            totalMigrationTime += System.nanoTime() - start;
+
+            long rstart = System.nanoTime();
+            lb.rollback(1, "6");
+            totalRollbackTime += System.nanoTime() - rstart;
+
+            monitor.stop();
+            Thread.sleep(200);
+
+            double avgCpu = monitor.getAverageCpu();
+            long avgMemory = monitor.getAverageMemory();
+
+            int totalLines = 0;
+            totalLines += countLiquibaseLines("6");
+
+
+            return new TestResult("Liquibase-Group6", "6", totalMigrationTime, totalRollbackTime,  0, totalLines, avgCpu,  avgMemory
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new TestResult("Liquibase-Group6", "6", 0, 0, -1, 0, 0, 0);
+        }
+    }
+
+    public TestResult runLiquibaseScenario1Average(int repetitions) {
+        long sumMigrationTime = 0;
+        long sumRollbackTime = 0;
+        double sumCpu = 0.0;
+        long sumMemory = 0;
+        int sumLines = 0;
+        int successCount = 0;
+        System.out.println(">>> Liquibase.runLiquibaseScenario1Average - reset");
+        resetDB();
+        for (int i = 0; i < repetitions; i++) {
+//            resetDB();
+            TestResult result = runLiquibaseScenario1();
+
+            if (result.getExitCode() == 0) {
+                successCount++;
+                sumMigrationTime += result.getMigrationTimeNs();
+                sumRollbackTime  += result.getRollbackTimeNs();
+                sumCpu           += result.getCpuUsage();
+                sumMemory        += result.getMemoryUsage();
+                sumLines         += result.getScriptLines();
+            } else {
+                System.out.println("Iteracja " + i + " zakończona błędem.");
+            }
+            System.out.println(">>> Liquibase.runLiquibaseScenario1Average - " + i + " - done");
+        }
+
+        if (successCount == 0) return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "1-5", 0, 0, -1, 0, 0, 0);
+
+        return new TestResult(
+                "Liquibase-AVG-"+repetitions+" iteracji",
+                "Liquibase-AVG-"+repetitions+" iteracji scen. 1",
+                sumMigrationTime / successCount,
+                sumRollbackTime / successCount,
+                0,
+                sumLines / successCount,
+                sumCpu / successCount,
+                sumMemory / successCount,
+                ((double) successCount / repetitions) * 100.0
+
+        );
+    }
+    public TestResult runLiquibaseScenario2Average(int repetitions) {
+        long sumMigrationTime = 0;
+        long sumRollbackTime = 0;
+        double sumCpu = 0.0;
+        long sumMemory = 0;
+        int sumLines = 0;
+        int successCount = 0;
+        System.out.println(">>> Liquibase.runLiquibaseScenario2Average - reset");
+        resetDB();
+        for (int i = 0; i < repetitions; i++) {
+//            resetDB();
+
+            TestResult result = runLiquibaseScenario2();
+
+            if (result.getExitCode() == 0) {
+                successCount++;
+                sumMigrationTime += result.getMigrationTimeNs();
+                sumRollbackTime  += result.getRollbackTimeNs();
+                sumCpu           += result.getCpuUsage();
+                sumMemory        += result.getMemoryUsage();
+                sumLines         += result.getScriptLines();
+            } else {
+                System.out.println("Iteracja " + i + " zakończona błędem.");
+            }
+
+            System.out.println(">>> Liquibase.runLiquibaseScenario2Average - " + i + " - done");
+        }
+
+        if (successCount == 0) return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "scen. 2 (ctx 6.)", 0, 0, -1, 0, 0, 0);
+
+        return new TestResult(
+                "Liquibase-AVG-"+repetitions+" iteracji",
+                "Liquibase-AVG-"+repetitions+" iteracji scen. 2 (ctx 6.)",
+                sumMigrationTime / successCount,
+                sumRollbackTime / successCount,
+                0,
+                sumLines / successCount,
+                sumCpu / successCount,
+                sumMemory / successCount,
+                ((double) successCount / repetitions) * 100.0
+        );
     }
 }
 
