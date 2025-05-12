@@ -8,21 +8,21 @@ spring:
   config:
     activate:
       on-profile: flyway
-  liquibase:
-    enabled: false
   flyway:
-    enabled: true
+    enabled: false
     clean-disabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
-
----
-spring:
-  config:
-    activate:
-      on-profile: liquibase
-  flyway:
-    enabled: false
   liquibase:
     enabled: false
     change-log: classpath:db/changelog/db.changelog-master.xml
+#---
+#spring:
+#  config:
+#    activate:
+#      on-profile: liquibase
+#  liquibase:
+#    enabled: false
+#    change-log: classpath:db/changelog/db.changelog-master.xml
+#  flyway:
+#    enabled: false

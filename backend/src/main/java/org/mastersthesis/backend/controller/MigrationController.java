@@ -14,11 +14,6 @@ public class MigrationController {
     @Autowired
     private MigrationService migrationService;
 
-    @GetMapping("/run-tests/Flyway")
-    public List<TestResult> runTestsFlyway() {
-        return migrationService.runTestsFlyway();
-    }
-
     @GetMapping("/run-tests/Liquibase/{id}")
     public List<TestResult> runTestsLiquibaseById(@PathVariable String id) {
         return List.of(migrationService.runLiquibaseScenario(id));
@@ -36,14 +31,37 @@ public class MigrationController {
         return List.of(migrationService.runLiquibaseScenario1Average(Integer.parseInt(n)));
     }
 
+    @GetMapping("/run-tests/Liquibase/rollback/{id}")
+    public TestResult rollbackLiquibaseByContext(@PathVariable String id) {
+        return migrationService.runLiquibaseRollback(id);
+    }
+
     @GetMapping("/run-tests/reset")
     public int resetDataBase() {
         return migrationService.resetDB();
     }
 
-    @GetMapping("/run-tests/Liquibase/rollback/{id}")
-    public TestResult rollbackLiquibaseByContext(@PathVariable String id) {
-        return migrationService.runLiquibaseRollback(id);
+    @GetMapping("/run-tests/Flyway/{id}")
+    public List<TestResult> runTestsFlywayById(@PathVariable String id) {
+        return List.of(migrationService.runFlywayScenario(id));
     }
+    @GetMapping("/run-tests/Flyway/6/{n}")
+    public List<TestResult> runFlywayScenario2Average(@PathVariable String n) {
+        return List.of(migrationService.runFlywayScenario2Average(Integer.parseInt(n)));
+    }
+    @GetMapping("/run-tests/Flyway/scenario1")
+    public List<TestResult> runTestsFlywayScenario1() {
+        return List.of(migrationService.runFlywayScenario1());
+    }
+    @GetMapping("/run-tests/Flyway/scenario1/{n}")
+    public List<TestResult> runFlywayScenario1Average(@PathVariable String n) {
+        return List.of(migrationService.runFlywayScenario1Average(Integer.parseInt(n)));
+    }
+
+    @GetMapping("/run-tests/Flyway/rollback/{id}")
+    public TestResult rollbackFlywayByContext(@PathVariable String id) {
+        return migrationService.runFlywayRollback(id);
+    }
+
 
 }

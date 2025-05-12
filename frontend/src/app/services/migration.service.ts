@@ -20,9 +20,6 @@ export interface TestResult {
 export class MigrationService {
   private apiUrl = 'http://localhost:8080';
   constructor(private http: HttpClient) { }
-  runTestsFlyway(): Observable<TestResult[]> {
-    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway`);
-  }
   runTestsLiquibaseS1(): Observable<TestResult[]> {
     return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/scenario1`);
   }
@@ -46,6 +43,26 @@ export class MigrationService {
 
   runLiquibaseScenario2_Iterations(iter: number): Observable<TestResult[]> {
     return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/6/${iter}`);
+  }
+
+  runTestsFlywayS1(): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/scenario1`);
+  }
+
+  runTestsFlywayStep(step: number): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/${step}`);
+  }
+
+  runFlywayScenario1_Iterations(iter: number): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/scenario1/${iter}`);
+  }
+
+  runFlywayScenario2_Iterations(iter: number): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/6/${iter}`);
+  }
+
+  runFlywayRollback(rollbackContext: number): Observable<TestResult> {
+    return this.http.get<TestResult>(`${this.apiUrl}/api/run-tests/Flyway/rollback/${rollbackContext}`);
   }
 }
 

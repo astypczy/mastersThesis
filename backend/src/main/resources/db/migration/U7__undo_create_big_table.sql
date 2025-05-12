@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS big_table;

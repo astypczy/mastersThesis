@@ -8,13 +8,16 @@ import liquibase.exception.DatabaseException;
 import liquibase.resource.ClassLoaderResourceAccessor;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
+import java.sql.Statement;
 import java.util.*;
 import javax.sql.DataSource;
 
@@ -30,14 +33,6 @@ public class MigrationService {
     public MigrationService(DataSource dataSource, JdbcTemplate jdbcTemplate) {
         this.dataSource   = dataSource;
         this.jdbcTemplate = jdbcTemplate;
-    }
-    public List<TestResult> runTestsFlyway() {
-        List<TestResult> results = new ArrayList<>();
-        // Scenariusz 1 (zmiana kolumny)
-        results.add(runFlywayScenario("rename_column"));
-        // Scenariusz 2 (duża tabela)
-        results.add(runFlywayScenario("big_table"));
-        return results;
     }
 
     public int resetDB(){
@@ -66,38 +61,244 @@ public class MigrationService {
         }
     }
 
-    // Uruchamia migrację Flyway dla danego scenariusza
-    private TestResult runFlywayScenario(String scenario) {
-        // Konfiguracja Flyway (czyszczenie bazy, lokalizacja skryptów)
-        Flyway flyway = Flyway.configure()
-                .dataSource(dataSource)
-                .locations("classpath:db/migration")
-                .load();
-        flyway.clean();  // czyść schemat bazy przed migracją
+    public TestResult runFlywayScenario(String context) {
+        String script = getFlywayScriptForContext(context);
 
-        long start = System.nanoTime();
-        flyway.migrate();  // wykonaj migracje
-        long duration = System.nanoTime() - start;
+        try (Connection conn = dataSource.getConnection()) {
+            Flyway flyway = Flyway.configure()
+                    .dataSource(dataSource)
+                    .locations("classpath:db/migration/")
+                    .baselineOnMigrate(true)
+                    .target(String.valueOf(Integer.parseInt(context)+1))
+                    .load();
 
-        // Opcjonalnie: rollback ręczny (przywrócenie zmian)
-        if (scenario.equals("rename_column")) {
-            long rstart = System.nanoTime();
-            jdbcTemplate.execute("ALTER TABLE person ADD COLUMN old_name VARCHAR(100)");
-            jdbcTemplate.execute("ALTER TABLE person DROP COLUMN new_name");
-            long rollbackTime = System.nanoTime() - rstart;
-            return new TestResult("Flyway", scenario, duration, rollbackTime, 0 /*exit*/, countFlywayLines(scenario), 0, 0);
-        } else {
-            long rstart = System.nanoTime();
-            jdbcTemplate.execute("DROP TABLE big_table");
-            long rollbackTime = System.nanoTime() - rstart;
-            return new TestResult("Flyway", scenario, duration, rollbackTime, 0, countFlywayLines(scenario), 0, 0);
+            System.out.println(">>> Flyway.migrate single script: " + script);
+
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+
+            long start = System.nanoTime();
+            flyway.migrate();
+            long migrationTime = System.nanoTime() - start;
+
+            monitor.stop();
+            Thread.sleep(200);
+
+            double avgCpu    = monitor.getAverageCpu();
+            long   avgMemory = monitor.getAverageMemory();
+
+            int lines = countFlywayLines(script);
+
+            return new TestResult("Flyway", context, migrationTime, 0, 0, lines, avgCpu, avgMemory);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new TestResult("Flyway", context, 0, 0, -1, 0, 0, 0);
         }
     }
+
+    public TestResult runFlywayRollback(String context) {
+        String undoScript = getFlywayScriptForContextRollback(context);
+
+        try (Connection conn = dataSource.getConnection()) {
+            System.out.println(">>> Flyway.rollback using ScriptUtils: " + undoScript);
+
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+
+            long start = System.nanoTime();
+            ScriptUtils.executeSqlScript(conn, new ClassPathResource("db/migration/" + undoScript));
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate(
+                        "DELETE FROM flyway_schema_history WHERE version = '" +
+                                String.valueOf(Integer.parseInt(context)+1) + "'"
+                );
+            }
+            long rollbackTime = System.nanoTime() - start;
+
+            monitor.stop();
+            Thread.sleep(200);
+
+            double avgCpu    = monitor.getAverageCpu();
+            long   avgMemory = monitor.getAverageMemory();
+
+            int lines = countFlywayLines(undoScript);
+            return new TestResult("Flyway-Rollback", context, 0, rollbackTime, 0, lines, avgCpu, avgMemory);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new TestResult("Flyway-Rollback", context, 0, 0, -1, 0, 0, 0);
+        }
+    }
+
+    private int countFlywayLines(String scriptName) {
+        boolean inBlockComment = false;
+        int count = 0;
+
+        try (InputStream is = getClass().getClassLoader()
+                .getResourceAsStream("db/migration/" + scriptName);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+
+                if (inBlockComment) {
+                    if (trimmed.endsWith("*/")) {
+                        inBlockComment = false;
+                    }
+                    continue;
+                }
+                if (trimmed.startsWith("/*")) {
+                    inBlockComment = true;
+                    continue;
+                }
+
+                if (trimmed.isEmpty() || trimmed.startsWith("--")) {
+                    continue;
+                }
+
+                count++;
+            }
+        } catch (IOException e) {
+            return 0;
+        }
+        return count;
+    }
+
+    public TestResult runFlywayScenario1() {
+        List<String> contexts = List.of("1", "2", "3", "4", "5");
+        List<String> contextsRB = List.of("5", "4", "3", "2", "1");
+
+        long totalMigrationTime = 0;
+        long totalRollbackTime  = 0;
+        int  totalLines         = 0;
+
+        try (Connection conn = dataSource.getConnection()) {
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+            for (String ctx : contexts) {
+                TestResult result = runFlywayScenario(ctx);
+                if (result.getExitCode() == 0) {
+                    totalMigrationTime += result.getMigrationTimeNs();
+                    totalLines         += result.getScriptLines();
+                }
+            }
+
+            for (String ctx : contextsRB) {
+                TestResult result = runFlywayRollback(ctx);
+                if (result.getExitCode() == 0) {
+                    totalRollbackTime += result.getRollbackTimeNs();
+                }
+            }
+            monitor.stop();
+            Thread.sleep(200);
+            double avgCpu = monitor.getAverageCpu();
+            long avgMemory = monitor.getAverageMemory();
+
+            return new TestResult("Flyway-Group1-5", "Flyway 1-5", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new TestResult("Flyway-Group1-5", "Flyway 1-5", 0, 0, -1, 0, 0, 0);
+        }
+    }
+
+    public TestResult runFlywayScenario1Average(int repetitions) {
+        long sumMigrationTime = 0;
+        long sumRollbackTime = 0;
+        double sumCpu = 0.0;
+        long sumMemory = 0;
+        int sumLines = 0;
+        int successCount = 0;
+
+        System.out.println(">>> Flyway.runFlywayScenario1Average - reset");
+        resetDB();
+        for (int i = 0; i < repetitions; i++) {
+//            resetDB();
+            TestResult result = runFlywayScenario1();
+
+            if (result.getExitCode() == 0) {
+                successCount++;
+                sumMigrationTime += result.getMigrationTimeNs();
+                sumRollbackTime  += result.getRollbackTimeNs();
+                sumCpu           += result.getCpuUsage();
+                sumMemory        += result.getMemoryUsage();
+                sumLines         += result.getScriptLines();
+            } else {
+                System.out.println("Iteracja " + i + " zakończona błędem.");
+            }
+            System.out.println(">>> Flyway.runLiquibaseScenario1Average - " + i + " - done");
+        }
+
+        if (successCount == 0) return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "1-5", 0, 0, -1, 0, 0, 0);
+
+        return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "Flyway-AVG-"+repetitions+" iteracji scen. 1", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
+    }
+
+    public TestResult runFlywayScenario2() {
+        long totalMigrationTime = 0;
+        long totalRollbackTime  = 0;
+        int  totalLines         = 0;
+
+        try (Connection conn = dataSource.getConnection()) {
+            ResourceMonitor monitor = new ResourceMonitor();
+            monitor.start();
+            TestResult result = runFlywayScenario("6");
+            if (result.getExitCode() == 0) {
+                totalMigrationTime += result.getMigrationTimeNs();
+                totalLines         += result.getScriptLines();
+            }
+
+            result = runFlywayRollback("6");
+            if (result.getExitCode() == 0) {
+                totalRollbackTime += result.getRollbackTimeNs();
+            }
+
+            monitor.stop();
+            Thread.sleep(200);
+            double avgCpu = monitor.getAverageCpu();
+            long avgMemory = monitor.getAverageMemory();
+
+            return new TestResult("Flyway 2 Scen. (6. ctx)", "Flyway 2 Scen. (6. ctx)", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new TestResult("Flyway 2 Scen. (6. ctx)", "Flyway 2 Scen. (6. ctx)", 0, 0, -1, 0, 0, 0);
+        }
+    }
+    public TestResult runFlywayScenario2Average(int repetitions) {
+        long sumMigrationTime = 0;
+        long sumRollbackTime = 0;
+        double sumCpu = 0.0;
+        long sumMemory = 0;
+        int sumLines = 0;
+        int successCount = 0;
+
+        System.out.println(">>> Flyway.runFlywayScenario2Average - reset");
+        resetDB();
+        for (int i = 0; i < repetitions; i++) {
+//            resetDB();
+            TestResult result = runFlywayScenario2();
+
+            if (result.getExitCode() == 0) {
+                successCount++;
+                sumMigrationTime += result.getMigrationTimeNs();
+                sumRollbackTime  += result.getRollbackTimeNs();
+                sumCpu           += result.getCpuUsage();
+                sumMemory        += result.getMemoryUsage();
+                sumLines         += result.getScriptLines();
+            } else {
+                System.out.println("Iteracja " + i + " zakończona błędem.");
+            }
+            System.out.println(">>> Flyway.runLiquibaseScenario2Average - " + i + " - done");
+        }
+
+        if (successCount == 0) return new TestResult("Flyway-AVG-"+repetitions+" iteracji scen 2.", "Flyway Scen. 2 (6. ctx)", 0, 0, -1, 0, 0, 0);
+
+        return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "Flyway-AVG-"+repetitions+" iteracji scen. 2 (6. ctx)", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
+    }
+
     public TestResult runLiquibaseScenario(String context) {
         try (Connection conn = dataSource.getConnection()) {
             Liquibase lb = createLiquibase(conn);
             System.out.println(">>> Liquibase.update context=" + context);
-
             ResourceMonitor monitor = new ResourceMonitor();
             monitor.start();
 
@@ -147,14 +348,6 @@ public class MigrationService {
         } catch (Exception e) {
             return new TestResult("Liquibase-Rollback", context, 0, 0, -1, 0, 0, 0);
         }
-    }
-
-
-    // Liczy liczbę linii w skryptach Flyway dla danego scenariusza
-    private int countFlywayLines(String scenario) {
-        // Można wczytać plik SQL i policzyć linie
-        // (w przykładzie zwracamy wartość przykładową lub obliczamy np. za pomocą Files.readAllLines)
-        return scenario.equals("rename_column") ? 3 : 1002;
     }
 
     private int countLiquibaseLines(String context) {
@@ -292,19 +485,9 @@ public class MigrationService {
 
         if (successCount == 0) return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "1-5", 0, 0, -1, 0, 0, 0);
 
-        return new TestResult(
-                "Liquibase-AVG-"+repetitions+" iteracji",
-                "Liquibase-AVG-"+repetitions+" iteracji scen. 1",
-                sumMigrationTime / successCount,
-                sumRollbackTime / successCount,
-                0,
-                sumLines / successCount,
-                sumCpu / successCount,
-                sumMemory / successCount,
-                ((double) successCount / repetitions) * 100.0
-
-        );
+        return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "Liquibase-AVG-"+repetitions+" iteracji scen. 1", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
     }
+
     public TestResult runLiquibaseScenario2Average(int repetitions) {
         long sumMigrationTime = 0;
         long sumRollbackTime = 0;
@@ -315,8 +498,6 @@ public class MigrationService {
         System.out.println(">>> Liquibase.runLiquibaseScenario2Average - reset");
         resetDB();
         for (int i = 0; i < repetitions; i++) {
-//            resetDB();
-
             TestResult result = runLiquibaseScenario2();
 
             if (result.getExitCode() == 0) {
@@ -335,17 +516,47 @@ public class MigrationService {
 
         if (successCount == 0) return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "scen. 2 (ctx 6.)", 0, 0, -1, 0, 0, 0);
 
-        return new TestResult(
-                "Liquibase-AVG-"+repetitions+" iteracji",
-                "Liquibase-AVG-"+repetitions+" iteracji scen. 2 (ctx 6.)",
-                sumMigrationTime / successCount,
-                sumRollbackTime / successCount,
-                0,
-                sumLines / successCount,
-                sumCpu / successCount,
-                sumMemory / successCount,
-                ((double) successCount / repetitions) * 100.0
-        );
+        return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "Liquibase-AVG-"+repetitions+" iteracji scen. 2 (ctx 6.)", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0 );
+    }
+    public String getFlywayScriptForContext(String context) {
+        switch (context) {
+            case "1":
+                return "V2__add_new_name.sql";
+            case "2":
+                return "V3__copy_legacy_to_new.sql";
+            case "3":
+                return "V4__create_person_sync_function.sql";
+            case "4":
+                return "V5__create_person_sync_trigger.sql";
+            case "5":
+                return "V6__drop_legacy_name_column.sql";
+            case "6":
+                return "V7__big_table.sql";
+            default:
+                throw new IllegalArgumentException(
+                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"6\"."
+                );
+        }
+    }
+    public String getFlywayScriptForContextRollback(String context) {
+        switch (context) {
+            case "1":
+                return "U2__undo_add_new_name.sql";
+            case "2":
+                return "U3__undo_copy_legacy_to_new.sql";
+            case "3":
+                return "U4__undo_create_person_name_sync_function.sql";
+            case "4":
+                return "U5__undo_create_person_name_sync_trigger.sql";
+            case "5":
+                return "U6__undo_init_person.sql";
+            case "6":
+                return "U7__undo_create_big_table.sql";
+            default:
+                throw new IllegalArgumentException(
+                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"6\"."
+                );
+        }
     }
 }
 

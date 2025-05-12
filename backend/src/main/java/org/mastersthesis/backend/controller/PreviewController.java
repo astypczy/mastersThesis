@@ -37,6 +37,24 @@ public class PreviewController {
         } catch (Exception e) {
             data.put("big_table", List.of(Map.of("info", "Tabela nie istnieje")));
         }
+        try {
+            jdbcTemplate.queryForList("SELECT * FROM databasechangelog");
+            data.put("databasechangelog", jdbcTemplate.queryForList("SELECT * FROM databasechangelog"));
+        } catch (Exception e) {
+            data.put("databasechangelog", List.of(Map.of("info", "Tabela nie istnieje")));
+        }
+        try {
+            jdbcTemplate.queryForList("SELECT * FROM databasechangeloglock");
+            data.put("databasechangeloglock", jdbcTemplate.queryForList("SELECT * FROM databasechangeloglock"));
+        } catch (Exception e) {
+            data.put("databasechangeloglock", List.of(Map.of("info", "Tabela nie istnieje")));
+        }
+        try {
+            jdbcTemplate.queryForList("SELECT * FROM flyway_schema_history");
+            data.put("flyway_schema_history", jdbcTemplate.queryForList("SELECT * FROM flyway_schema_history"));
+        } catch (Exception e) {
+            data.put("flyway_schema_history", List.of(Map.of("info", "Tabela nie istnieje")));
+        }
 
         return ResponseEntity.ok(data);
     }

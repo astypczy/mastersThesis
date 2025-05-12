@@ -30,12 +30,6 @@ export class MainComponent {
     private toastr: ToastrService
   ) {}
 
-  runTestsFlyway() {
-    this.migrationService.runTestsFlyway().subscribe(data => {
-      this.resultsFlyway = data;
-    });
-  }
-
   runTestsLiquibaseS1() {
     this.migrationService.runTestsLiquibaseS1().subscribe(data => {
       this.resultsLiquibase = data;
@@ -93,6 +87,49 @@ export class MainComponent {
       this.resultsLiquibase = data;
       console.log('Frontend: Scen. 2. Liquibase step', data);
       this.toastr.success('Liquibase: Scen. 2. Liquibase: ' + iter + ' iteracji', 'Sukces');
+    });
+  }
+
+  runTestsFlywayS1() {
+    this.migrationService.runTestsFlywayS1().subscribe(data => {
+      this.resultsFlyway = data;
+    });
+  }
+
+  runFlywayStep(step: number) {
+    console.log('Frontend: wywołuję Flyway step', step);
+    this.toastr.info('Flyway: Wykonuję krok nr ' + step, 'W toku ...')
+    this.migrationService.runTestsFlywayStep(step)
+      .subscribe(res => {
+        this.resultsFlyway = res;
+        console.log('Frontend: odpowiedź Flyway step', res);
+        this.toastr.success('Flyway: Wykonano krok nr ' + step, 'Sukces');
+      });
+  }
+
+  runFlywayScenario1_Iterations(iter: number) {
+    console.log('Frontend: Scen. 1. Flyway: ', iter);
+    this.toastr.info('Liquibase: Scen. 1. Flyway ' + iter, 'W toku ...')
+    this.migrationService.runFlywayScenario1_Iterations(iter).subscribe(data => {
+      this.resultsFlyway = data;
+      console.log('Frontend: Scen. 1. Flyway step', data);
+      this.toastr.success('Flyway: Scen. 1. Flyway: ' + iter + ' iteracji', 'Sukces');
+    });
+  }
+
+  runFlywayScenario2_Iterations(iter: number) {
+    console.log('Frontend: Scen. 2. Flyway: ', iter);
+    this.toastr.info('Flyway: Scen. 2. Flyway ' + iter, 'W toku ...')
+    this.migrationService.runFlywayScenario2_Iterations(iter).subscribe(data => {
+      this.resultsFlyway = data;
+      console.log('Frontend: Scen. 2. Flyway step', data);
+      this.toastr.success('Flyway: Scen. 2. Flyway: ' + iter + ' iteracji', 'Sukces');
+    });
+  }
+
+  runFlywayRollback(rollbackContext: number) {
+    this.migrationService.runFlywayRollback(rollbackContext).subscribe(res => {
+      this.rollbackResult = res;
     });
   }
 }
