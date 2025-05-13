@@ -105,7 +105,7 @@ jobs:
 
       - name: Download & unpack Liquibase CLI
         run: |
-          LIQUIBASE_VERSION=4.27.1
+          LIQUIBASE_VERSION=4.31.1
           curl -L https://github.com/liquibase/liquibase/releases/download/v$LIQUIBASE_VERSION/liquibase-$LIQUIBASE_VERSION.tar.gz \
             | tar zx -C $HOME
           echo "$HOME/liquibase" >> $GITHUB_PATH
