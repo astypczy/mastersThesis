@@ -46,6 +46,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Export JAVA_HOME
+        run: echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+
       - name: Build backend (skip tests)
         working-directory: backend
         run: mvn clean package -DskipTests
@@ -105,6 +108,8 @@ jobs:
 
       - name: Liquibase update
         uses: liquibase-github-actions/update@v4.31.1
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         with:
           changelogFile: backend/src/main/resources/db/changelog/db.changelog-master.xml
           url: ${{ env.DB_URL }}
@@ -113,6 +118,8 @@ jobs:
 
       - name: Liquibase rollback
         uses: liquibase/liquibase-github-action@v4
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         with:
           operation: rollbackCount
           count: 6
