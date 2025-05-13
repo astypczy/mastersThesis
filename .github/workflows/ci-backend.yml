@@ -52,11 +52,11 @@ jobs:
       - name: Download & unpack Flyway CLI
         run: |
           FLYWAY_VERSION=10.20.1
-          curl -L https://repo1.maven.org/.../flyway-commandline-$FLYWAY_VERSION-linux-x64.tar.gz \
+          curl -L \
+            "https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
             | tar xz -C $HOME
-          echo "$HOME/flyway-$FLYWAY_VERSION/flyway" > $HOME/.flyway
-          chmod +x $HOME/.flyway
-          
+          chmod +x $HOME/flyway-${FLYWAY_VERSION}/flyway
+
       - name: Flyway migrate
         run: |
           $HOME/.flyway -url="$DB_URL" \
