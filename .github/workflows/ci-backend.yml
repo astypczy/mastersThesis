@@ -1,0 +1,64 @@
+# .github/workflows/ci-backend.yml
+name: CI · Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-migrate:
+    runs-on: windows-latest
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASS }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build backend
+        working-directory: backend
+        run: mvn clean package -DskipTests
+
+      - name: Install Flyway CLI
+        run: choco install flyway --version=10.20.1 --yes
+        shell: pwsh
+
+      - name: Flyway migrate
+        run: |
+          flyway -url="$Env:DB_URL" `
+                 -user="$Env:DB_USER" `
+                 -password="$Env:DB_PASS" `
+                 -locations=filesystem:backend/src/main/resources/db/migration `
+                 migrate
+        shell: pwsh
+
+      - name: Install Liquibase CLI
+        run: choco install liquibase --version=4.27.1 --yes
+        shell: pwsh
+
+      - name: Liquibase update
+        run: |
+          liquibase \
+            --url="$Env:DB_URL" \
+            --username="$Env:DB_USER" \
+            --password="$Env:DB_PASS" \
+            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+            update
+        shell: pwsh
+
+      - name: Run unit tests
+        working-directory: backend
+        run: mvn test
