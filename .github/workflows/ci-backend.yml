@@ -104,11 +104,9 @@ jobs:
           done
 
       - name: Download & unpack Liquibase CLI
-        run: |
-          LIQUIBASE_VERSION=4.31.1
-          curl -L https://github.com/liquibase/liquibase/releases/download/v$LIQUIBASE_VERSION/liquibase-$LIQUIBASE_VERSION.tar.gz \
-            | tar zx -C $HOME
-          echo "$HOME/liquibase" >> $GITHUB_PATH
+        uses: liquibase/liquibase-github-action@v4
+        with:
+          version: '4.31.1'
 
       - name: Liquibase update
         run: |
@@ -126,7 +124,7 @@ jobs:
             --username="$DB_USER" \
             --password="$DB_PASS" \
             --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            rollbackCount 1
+            rollbackCount 6
 
       - name: Run unit tests
         working-directory: backend
