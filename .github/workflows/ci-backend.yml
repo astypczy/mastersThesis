@@ -49,6 +49,18 @@ jobs:
       - name: Build backend (skip tests)
         working-directory: backend
         run: mvn clean package -DskipTests
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install psycopg2 faker
+
+      - name: Run Python DB initializer
+        run: python sql/addData.py
 
       - name: Download & unpack Flyway CLI
         run: |
