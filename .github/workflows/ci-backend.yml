@@ -103,19 +103,15 @@ jobs:
             psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
           done
 
-      - name: Download & unpack Liquibase CLI
-        uses: liquibase/liquibase-github-action@v4
+      - name: Liquibase download & update
+        uses: liquibase/liquibase-github-action@v4.31.1
         with:
-          version: '4.31.1'
+          operation: update
+          changeLogFile: backend/src/main/resources/db/changelog/db.changelog-master.xml
+          url: $DB_URL
+          username: $DB_USER
+          password: $DB_PASS
 
-      - name: Liquibase update
-        run: |
-          liquibase \
-            --url="$DB_URL" \
-            --username="$DB_USER" \
-            --password="$DB_PASS" \
-            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            update
 
       - name: Liquibase rollback
         run: |
