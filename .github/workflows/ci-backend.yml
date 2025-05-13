@@ -34,7 +34,6 @@ jobs:
       DB_URL: jdbc:postgresql://localhost:5432/mastersThesis
       DB_USER: postgres
       DB_PASS: postgres
-      PGPASSWORD: postgres
 
     steps:
       - name: Checkout repo
@@ -108,19 +107,20 @@ jobs:
         with:
           operation: update
           changeLogFile: backend/src/main/resources/db/changelog/db.changelog-master.xml
-          url: $DB_URL
-          username: $DB_USER
-          password: $DB_PASS
+          url: ${{ env.DB_URL }}
+          username: ${{ env.DB_USER }}
+          password: ${{ env.DB_PASS }}
 
 
       - name: Liquibase rollback
-        run: |
-          liquibase \
-            --url="$DB_URL" \
-            --username="$DB_USER" \
-            --password="$DB_PASS" \
-            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            rollbackCount 6
+        uses: liquibase/liquibase-github-action@v4
+        with:
+          operation: rollbackCount
+          count: 6
+          changeLogFile: backend/src/main/resources/db/changelog/db.changelog-master.xml
+          url: ${{ env.DB_URL }}
+          username: ${{ env.DB_USER }}
+          password: ${{ env.DB_PASS }}
 
       - name: Run unit tests
         working-directory: backend
