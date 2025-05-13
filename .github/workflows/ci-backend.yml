@@ -76,6 +76,7 @@ jobs:
             -url="$DB_URL" \
             -user="$DB_USER" \
             -password="$DB_PASS" \
+            -baselineOnMigrate=true \
             -locations=filesystem:backend/src/main/resources/db/migration \
             migrate
 
