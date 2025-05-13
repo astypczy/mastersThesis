@@ -1,5 +1,5 @@
 # .github/workflows/ci-backend.yml
-name: CI · Backend
+name: CI · Backend (Ubuntu + Postgres service)
 
 on:
   push:
@@ -13,51 +13,72 @@ on:
 
 jobs:
   build-and-migrate:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mastersThesis
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      DB_URL: ${{ secrets.DB_URL }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASS: ${{ secrets.DB_PASS }}
+      DB_URL:    jdbc:postgresql://localhost:5432/mastersThesis
+      DB_USER:   postgres
+      DB_PASS:   postgres
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Build backend
+      - name: Build backend (skip tests)
         working-directory: backend
         run: mvn clean package -DskipTests
 
-      - name: Install Flyway CLI
-        run: choco install flyway --version=10.20.1 --yes
-        shell: pwsh
+      - name: Download & unpack Flyway CLI
+        run: |
+          FLYWAY_VERSION=10.20.1
+          curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/$FLYWAY_VERSION/flyway-commandline-$FLYWAY_VERSION-linux-x64.tar.gz \
+            | tar xz -C $HOME
+          echo "$HOME/flyway-$FLYWAY_VERSION/flyway" > $HOME/.flyway
 
       - name: Flyway migrate
         run: |
-          flyway -url="$Env:DB_URL" `
-                 -user="$Env:DB_USER" `
-                 -password="$Env:DB_PASS" `
-                 -locations=filesystem:backend/src/main/resources/db/migration `
-                 migrate
-        shell: pwsh
+          $HOME/.flyway -url="$DB_URL" \
+                        -user="$DB_USER" \
+                        -password="$DB_PASS" \
+                        -locations=filesystem:backend/src/main/resources/db/migration \
+                        migrate
 
-      - name: Install Liquibase CLI
-        run: choco install liquibase --version=4.27.1 --yes
-        shell: pwsh
+      - name: Download & unpack Liquibase CLI
+        run: |
+          LIQUIBASE_VERSION=4.27.1
+          curl -L https://github.com/liquibase/liquibase/releases/download/v$LIQUIBASE_VERSION/liquibase-$LIQUIBASE_VERSION.tar.gz \
+            | tar zx -C $HOME
+          echo "$HOME/liquibase" > $HOME/.liquibase
 
       - name: Liquibase update
         run: |
-          liquibase \
-            --url="$Env:DB_URL" \
-            --username="$Env:DB_USER" \
-            --password="$Env:DB_PASS" \
+          $HOME/.liquibase \
+            --url="$DB_URL" \
+            --username="$DB_USER" \
+            --password="$DB_PASS" \
             --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
             update
-        shell: pwsh
 
       - name: Run unit tests
         working-directory: backend

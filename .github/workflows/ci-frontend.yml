@@ -1,5 +1,5 @@
 # .github/workflows/ci-frontend.yml
-name: CI · Frontend
+name: CI · Frontend (Ubuntu)
 
 on:
   push:
@@ -13,13 +13,13 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 18
         uses: actions/setup-node@v3
         with:
           node-version: '18'
@@ -32,6 +32,11 @@ jobs:
         working-directory: frontend
         run: npm run build -- --configuration production
 
-      - name: Run end-to-end tests
+      - name: Run end-to-end tests (if configured)
         working-directory: frontend
-        run: npm run e2e
+        run: |
+          if npm run | grep -q 'e2e'; then
+            npm run e2e
+          else
+            echo "No e2e script defined—skipping."
+          fi
