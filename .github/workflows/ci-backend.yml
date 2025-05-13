@@ -59,11 +59,13 @@ jobs:
 
       - name: Flyway migrate
         run: |
-          $HOME/.flyway -url="$DB_URL" \
-                        -user="$DB_USER" \
-                        -password="$DB_PASS" \
-                        -locations=filesystem:backend/src/main/resources/db/migration \
-                        migrate
+          $HOME/flyway-$FLYWAY_VERSION/flyway \
+            -url="$DB_URL" \
+            -user="$DB_USER" \
+            -password="$DB_PASS" \
+            -locations=filesystem:backend/src/main/resources/db/migration \
+            migrate
+
 
       - name: Download & unpack Liquibase CLI
         run: |
