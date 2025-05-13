@@ -34,6 +34,7 @@ jobs:
       DB_URL: jdbc:postgresql://localhost:5432/mastersThesis
       DB_USER: postgres
       DB_PASS: postgres
+      PGPASSWORD: postgres
 
     steps:
       - name: Checkout repo
