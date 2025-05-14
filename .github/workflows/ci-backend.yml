@@ -107,26 +107,24 @@ jobs:
           done
 
       - name: Install Liquibase CLI
-        uses: liquibase-github-actions/cli@v4
-
-      - name: Liquibase update via CLI
         run: |
-          liquibase \
-            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            --url=$DB_URL \
-            --username=$DB_USER \
-            --password=$DB_PASS \
-            update
+          curl -L https://github.com/liquibase/liquibase/releases/download/v4.31.1/liquibase-4.31.1.tar.gz \
+            | tar xz -C $HOME
+          echo "$HOME/liquibase" >> $GITHUB_PATH
+
+      - name: Liquibase Update 
+        run: |
+          liquibase --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                    --url=$DB_URL \
+                    --username=$DB_USER \
+                    --password=$DB_PASS \
+                    update
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
 
-
-      - name: Liquibase rollback
-        uses: liquibase/liquibase-github-action@v4
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+      - name: Liquibase Rollback Count
+        uses: liquibase-github-actions/rollback-count@v4.31.1
         with:
-          operation: rollbackCount
           count: 6
           changeLogFile: backend/src/main/resources/db/changelog/db.changelog-master.xml
           url: ${{ env.DB_URL }}
