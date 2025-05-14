@@ -94,27 +94,24 @@ jobs:
             U3__undo_copy_legacy_to_new.sql \
             U2__undo_add_new_name.sql
           do
-            echo "Executing: $script"
             psql -h localhost -U postgres -d mastersThesis -f backend/src/main/resources/db/migration/$script
           done
-
-
           echo "Cleaning flyway_schema_history manually..."
           for ver in 7 6 5 4 3 2
           do
-            echo "Deleting version $ver"
-            psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
+            psql -h localhost -U postgres -d mastersThesis \
+              -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
           done
 
       - name: Install Liquibase CLI
         run: |
           LIQUIBASE_VERSION=4.31.1
-          curl -L https://github.com/liquibase/liquibase/releases/download/v${LIQUIBASE_VERSION}/liquibase-${LIQUIBASE_VERSION}.tar.gz \
+          curl -L "https://github.com/liquibase/liquibase/releases/download/v${LIQUIBASE_VERSION}/liquibase-${LIQUIBASE_VERSION}.tar.gz" \
             | tar xz -C $HOME
-          echo "$HOME/liquibase" >> $GITHUB_PATH
+          echo "$HOME/liquibase" >> $GITHUB_PATH 
 
       - name: Verify Liquibase installation
-        run: liquibase --version
+        run: liquibase --version 
 
       - name: Liquibase Update (host)
         run: |
