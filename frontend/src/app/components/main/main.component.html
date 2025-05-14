@@ -62,14 +62,14 @@
 <section>
   <h2>Rollback Liquibase</h2>
   <label for="rollback-context-lb">Wpisz kontekst (1–6):</label>
-  <input id="rollback-context-lb" type="number" min="1" max="6" [(ngModel)]="rollbackContext" />
+  <input id="rollback-context-lb" type="number" min="1" max="6" [(ngModel)]="rollbackContext_lb" />
 
-  <button (click)="runLiquibaseRollback(rollbackContext)">
-    Wykonaj rollback kontekstu {{ rollbackContext }}
+  <button (click)="runLiquibaseRollback(rollbackContext_lb)">
+    Wykonaj rollback kontekstu {{ rollbackContext_lb }}
   </button>
 
 
-  <div *ngIf="rollbackResult">
+  <div *ngIf="rollbackResultLiquibase">
     <h3>Wynik rollbacku</h3>
     <table class="table">
       <thead>
@@ -79,10 +79,10 @@
       </thead>
       <tbody>
       <tr>
-        <td>{{ rollbackResult.scenario }}</td>
-        <td>{{ rollbackResult.rollbackTimeNs }}</td>
-        <td>{{ rollbackResult.exitCode }}</td>
-        <td>{{ rollbackResult.scriptLines }}</td>
+        <td>{{ rollbackResultLiquibase.scenario }}</td>
+        <td>{{ rollbackResultLiquibase.rollbackTimeNs }}</td>
+        <td>{{ rollbackResultLiquibase.exitCode }}</td>
+        <td>{{ rollbackResultLiquibase.scriptLines }}</td>
       </tr>
       </tbody>
     </table>
@@ -97,18 +97,18 @@
   </div>
   <div class="flyway-scenario1-iterations">
     <label>Wpisz liczbe iteracji 1. scenariusza:</label>
-    <input id="flyway-scenario1-iterations-n" type="number" min="1" [(ngModel)]="scenario1_iter_lb" />
+    <input id="flyway-scenario1-iterations-n" type="number" min="1" [(ngModel)]="scenario1_iter_fw" />
 
-    <button (click)="runFlywayScenario1_Iterations(scenario1_iter_lb)">
-      Wykonaj scenariusz 1. {{ scenario1_iter_lb }} razy
+    <button (click)="runFlywayScenario1_Iterations(scenario1_iter_fw)">
+      Wykonaj scenariusz 1. {{ scenario1_iter_fw }} razy
     </button>
   </div>
   <div class="flyway-scenario2-iterations">
     <label>Wpisz liczbe iteracji 2. scenariusza:</label>
-    <input id="flyway-scenario2-iterations-n" type="number" min="1" [(ngModel)]="scenario2_iter_lb" />
+    <input id="flyway-scenario2-iterations-n" type="number" min="1" [(ngModel)]="scenario2_iter_fw" />
 
-    <button (click)="runFlywayScenario2_Iterations(scenario2_iter_lb)">
-      Wykonaj scenariusz 2. {{ scenario2_iter_lb }} razy
+    <button (click)="runFlywayScenario2_Iterations(scenario2_iter_fw)">
+      Wykonaj scenariusz 2. {{ scenario2_iter_fw }} razy
     </button>
   </div>
   <div class="flyway-buttons">
@@ -143,14 +143,14 @@
 <section>
   <h2>Rollback Flyway</h2>
   <label for="rollback-context-fw">Wpisz kontekst (1–6):</label>
-  <input id="rollback-context-fw" type="number" min="1" max="6" [(ngModel)]="rollbackContext" />
+  <input id="rollback-context-fw" type="number" min="1" max="6" [(ngModel)]="rollbackContext_fw" />
 
-  <button (click)="runFlywayRollback(rollbackContext)">
-    Wykonaj rollback kontekstu {{ rollbackContext }}
+  <button (click)="runFlywayRollback(rollbackContext_fw)">
+    Wykonaj rollback kontekstu {{ rollbackContext_fw }}
   </button>
 
 
-  <div *ngIf="rollbackResult">
+  <div *ngIf="rollbackResultFlyway">
     <h3>Wynik rollbacku</h3>
     <table class="table">
       <thead>
@@ -160,10 +160,10 @@
       </thead>
       <tbody>
       <tr>
-        <td>{{ rollbackResult.scenario }}</td>
-        <td>{{ rollbackResult.rollbackTimeNs }}</td>
-        <td>{{ rollbackResult.exitCode }}</td>
-        <td>{{ rollbackResult.scriptLines }}</td>
+        <td>{{ rollbackResultFlyway.scenario }}</td>
+        <td>{{ rollbackResultFlyway.rollbackTimeNs }}</td>
+        <td>{{ rollbackResultFlyway.exitCode }}</td>
+        <td>{{ rollbackResultFlyway.scriptLines }}</td>
       </tr>
       </tbody>
     </table>

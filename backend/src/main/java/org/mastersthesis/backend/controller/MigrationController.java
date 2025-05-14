@@ -30,17 +30,14 @@ public class MigrationController {
     public List<TestResult> runLiquibaseScenario1Average(@PathVariable String n) {
         return List.of(migrationService.runLiquibaseScenario1Average(Integer.parseInt(n)));
     }
-
     @GetMapping("/run-tests/Liquibase/rollback/{id}")
     public TestResult rollbackLiquibaseByContext(@PathVariable String id) {
         return migrationService.runLiquibaseRollback(id);
     }
-
     @GetMapping("/run-tests/reset")
     public int resetDataBase() {
         return migrationService.resetDB();
     }
-
     @GetMapping("/run-tests/Flyway/{id}")
     public List<TestResult> runTestsFlywayById(@PathVariable String id) {
         return List.of(migrationService.runFlywayScenario(id));
@@ -62,6 +59,4 @@ public class MigrationController {
     public TestResult rollbackFlywayByContext(@PathVariable String id) {
         return migrationService.runFlywayRollback(id);
     }
-
-
 }

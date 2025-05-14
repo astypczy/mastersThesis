@@ -20,10 +20,14 @@ export class MainComponent {
   resultsFlyway: TestResult[]    = [];
   resultsLiquibase: TestResult[] = [];
   resetStatus: number | null     = null;
-  rollbackContext = 1;
-  rollbackResult?: TestResult;
+  rollbackResultFlyway?: TestResult;
+  rollbackResultLiquibase?: TestResult;
   scenario1_iter_lb = 1;
   scenario2_iter_lb = 1;
+  scenario2_iter_fw = 1;
+  scenario1_iter_fw = 1;
+  rollbackContext_lb= 1;
+  rollbackContext_fw = 1;
 
   constructor(
     private migrationService: MigrationService,
@@ -31,7 +35,11 @@ export class MainComponent {
   ) {}
 
   runTestsLiquibaseS1() {
+    this.toastr.info('Wykonywanie Liquibase S1', 'Proszę czekać');
+    console.log('Wykonywanie Liquibase S1');
     this.migrationService.runTestsLiquibaseS1().subscribe(data => {
+      this.toastr.success('Wykonano Liquibase S1', 'Sukces');
+      console.log('Wykonano Liquibase S1');
       this.resultsLiquibase = data;
     });
   }
@@ -66,8 +74,12 @@ export class MainComponent {
   }
 
   runLiquibaseRollback(context: number) {
+    console.log('Frontend: wywołuję Liquibase rollback', context);
+    this.toastr.info('Liquibase: Wykonuję rollback nr ' + context, 'W toku ...')
     this.migrationService.runLiquibaseRollback(context).subscribe(res => {
-      this.rollbackResult = res;
+      console.log('Frontend: odpowiedź Liquibase rollback', res);
+      this.toastr.success('Liquibase: Wykonano rollback nr ' + context, 'Sukces');
+      this.rollbackResultLiquibase = res;
     });
   }
   runLiquibaseScenario1_Iterations(iter: number) {
@@ -91,7 +103,11 @@ export class MainComponent {
   }
 
   runTestsFlywayS1() {
+    this.toastr.info('Wykonywanie Flyway S1', 'Proszę czekać');
+    console.log('Wykonywanie Flyway S1');
     this.migrationService.runTestsFlywayS1().subscribe(data => {
+      this.toastr.success('Wykonano Flyway S1', 'Sukces');
+      console.log('Wykonano Flyway S1');
       this.resultsFlyway = data;
     });
   }
@@ -128,8 +144,12 @@ export class MainComponent {
   }
 
   runFlywayRollback(rollbackContext: number) {
+    console.log('Frontend: wywołuję Flyway rollback', rollbackContext);
+    this.toastr.info('Flyway: Wykonuję rollback nr ' + rollbackContext, 'W toku ...')
     this.migrationService.runFlywayRollback(rollbackContext).subscribe(res => {
-      this.rollbackResult = res;
+      console.log('Frontend: odpowiedź Flyway rollback', res);
+      this.toastr.success('Rollback: Wykonano rollback nr ' + rollbackContext, 'Sukces');
+      this.rollbackResultFlyway = res;
     });
   }
 }
