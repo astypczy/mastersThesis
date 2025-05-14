@@ -103,17 +103,22 @@ jobs:
               -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
           done
 
-      - name: Install Liquibase CLI
+      - name: Install Liquibase via APT
         run: |
-          LIQUIBASE_VERSION=4.31.1
-          curl -L "https://github.com/liquibase/liquibase/releases/download/v${LIQUIBASE_VERSION}/liquibase-${LIQUIBASE_VERSION}.tar.gz" \
-            | tar xz -C $HOME
-          echo "$HOME/liquibase" >> $GITHUB_PATH 
+          wget -O- https://repo.liquibase.com/liquibase.asc \
+            | gpg --dearmor > liquibase-keyring.gpg \
+            && sudo mv liquibase-keyring.gpg /usr/share/keyrings/ \
+            && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/liquibase-keyring.gpg] https://repo.liquibase.com stable main' \
+               | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
+
+          sudo apt-get update
+
+          sudo apt-get install -y liquibase
 
       - name: Verify Liquibase installation
         run: liquibase --version 
 
-      - name: Liquibase Update (host)
+      - name: Liquibase Update
         run: |
           liquibase \
             --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
