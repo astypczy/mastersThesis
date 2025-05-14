@@ -112,11 +112,7 @@ jobs:
                | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
 
           sudo apt-get update
-
           sudo apt-get install -y liquibase
-
-      - name: Verify Liquibase installation
-        run: liquibase --version 
 
       - name: Liquibase Update
         run: |
@@ -129,14 +125,17 @@ jobs:
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
 
-      - name: Liquibase Rollback Count
-        uses: liquibase-github-actions/rollback-count@v4.31.1
-        with:
-          count: 6
-          changeLogFile: backend/src/main/resources/db/changelog/db.changelog-master.xml
-          url: ${{ env.DB_URL }}
-          username: ${{ env.DB_USER }}
-          password: ${{ env.DB_PASS }}
+      - name: Liquibase Rollback Count (host)
+        run: |
+          liquibase \
+            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+            --url=$DB_URL \
+            --username=$DB_USER \
+            --password=$DB_PASS \
+            rollback-count --count=6
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+
 
       - name: Run unit tests
         working-directory: backend
