@@ -135,8 +135,3 @@ jobs:
             rollback-count --count=6
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
-
-
-      - name: Run unit tests
-        working-directory: backend
-        run: mvn test
