@@ -111,7 +111,7 @@ jobs:
               LINES=$(wc -l $MIG_SQL | awk '{print $1}')
               echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
-
+            psql -h localhost -U postgres -d mastersThesis -c "SELECT * FROM flyway_schema_history;"
             for ctx in {23..14}; do
               UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
               START=$(date +%s%N)
