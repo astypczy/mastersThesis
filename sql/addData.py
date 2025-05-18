@@ -1,6 +1,13 @@
+# python addData.py --count 5000
 import psycopg2
 from faker import Faker
 import random
+import argparse
+
+parser = argparse.ArgumentParser(description="Generate fake data for the database.")
+parser.add_argument('--count', type=int, default=100000, help='Number of people to generate (default: 100000)')
+args = parser.parse_args()
+record_count = args.count
 
 conn = psycopg2.connect(
     dbname="mastersThesis", user="postgres", password="postgres",
@@ -16,6 +23,8 @@ cur.execute("DROP TABLE IF EXISTS person CASCADE")
 cur.execute("DROP TABLE IF EXISTS databasechangelog CASCADE")
 cur.execute("DROP TABLE IF EXISTS databasechangeloglock CASCADE")
 cur.execute("DROP TABLE IF EXISTS flyway_schema_history CASCADE")
+cur.execute("DROP TABLE IF EXISTS person_audit CASCADE")
+cur.execute("DROP TABLE IF EXISTS big_table CASCADE")
 
 cur.execute("""
     CREATE TABLE person (
@@ -45,7 +54,7 @@ cur.execute("""
     )
 """)
 
-for _ in range(50000):
+for _ in range(record_count):
     name = fake.name()
     email = fake.unique.email()
     legacy_name = name

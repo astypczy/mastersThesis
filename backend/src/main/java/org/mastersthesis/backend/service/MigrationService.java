@@ -165,8 +165,8 @@ public class MigrationService {
     }
 
     public TestResult runFlywayScenario1() {
-        List<String> contexts = List.of("1", "2", "3", "4", "5");
-        List<String> contextsRB = List.of("5", "4", "3", "2", "1");
+        List<String> contexts = List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
+        List<String> contextsRB = List.of("13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1");
 
         long totalMigrationTime = 0;
         long totalRollbackTime  = 0;
@@ -194,10 +194,10 @@ public class MigrationService {
             double avgCpu = monitor.getAverageCpu();
             long avgMemory = monitor.getAverageMemory();
 
-            return new TestResult("Flyway-Group1-5", "Flyway 1-5", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
+            return new TestResult("Flyway-Group-scen1-1-13", "Flyway-Group-scen1-1-13", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
         } catch (Exception e) {
             e.printStackTrace();
-            return new TestResult("Flyway-Group1-5", "Flyway 1-5", 0, 0, -1, 0, 0, 0);
+            return new TestResult("Flyway-Group-scen1-1-13", "Flyway-Group-scen1-1-13", 0, 0, -1, 0, 0, 0);
         }
     }
 
@@ -228,12 +228,14 @@ public class MigrationService {
             System.out.println(">>> Flyway.runLiquibaseScenario1Average - " + i + " - done");
         }
 
-        if (successCount == 0) return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "1-5", 0, 0, -1, 0, 0, 0);
+        if (successCount == 0) return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "Flyway-AVG-"+repetitions+" iteracji scen. 1", 0, 0, -1, 0, 0, 0);
 
         return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "Flyway-AVG-"+repetitions+" iteracji scen. 1", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
     }
 
     public TestResult runFlywayScenario2() {
+        List<String> contexts = List.of("14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
+        List<String> contextsRB = List.of("23", "22", "21", "20", "19", "18", "17", "16", "15", "14");
         long totalMigrationTime = 0;
         long totalRollbackTime  = 0;
         int  totalLines         = 0;
@@ -241,26 +243,29 @@ public class MigrationService {
         try (Connection conn = dataSource.getConnection()) {
             ResourceMonitor monitor = new ResourceMonitor();
             monitor.start();
-            TestResult result = runFlywayScenario("6");
-            if (result.getExitCode() == 0) {
-                totalMigrationTime += result.getMigrationTimeNs();
-                totalLines         += result.getScriptLines();
+            for (String ctx : contexts) {
+                TestResult result = runFlywayScenario(ctx);
+                if (result.getExitCode() == 0) {
+                    totalMigrationTime += result.getMigrationTimeNs();
+                    totalLines         += result.getScriptLines();
+                }
             }
 
-            result = runFlywayRollback("6");
-            if (result.getExitCode() == 0) {
-                totalRollbackTime += result.getRollbackTimeNs();
+            for (String ctx : contextsRB) {
+                TestResult result = runFlywayRollback(ctx);
+                if (result.getExitCode() == 0) {
+                    totalRollbackTime += result.getRollbackTimeNs();
+                }
             }
-
             monitor.stop();
             Thread.sleep(200);
             double avgCpu = monitor.getAverageCpu();
             long avgMemory = monitor.getAverageMemory();
 
-            return new TestResult("Flyway 2 Scen. (6. ctx)", "Flyway 2 Scen. (6. ctx)", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
+            return new TestResult("Flyway-Group14-23", "Flyway scen 1 14-23", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
         } catch (Exception e) {
             e.printStackTrace();
-            return new TestResult("Flyway 2 Scen. (6. ctx)", "Flyway 2 Scen. (6. ctx)", 0, 0, -1, 0, 0, 0);
+            return new TestResult("Flyway-Group14-23", "Flyway scen 1 14-23", 0, 0, -1, 0, 0, 0);
         }
     }
     public TestResult runFlywayScenario2Average(int repetitions) {
@@ -290,9 +295,9 @@ public class MigrationService {
             System.out.println(">>> Flyway.runLiquibaseScenario2Average - " + i + " - done");
         }
 
-        if (successCount == 0) return new TestResult("Flyway-AVG-"+repetitions+" iteracji scen 2.", "Flyway Scen. 2 (6. ctx)", 0, 0, -1, 0, 0, 0);
+        if (successCount == 0) return new TestResult("Flyway-AVG-"+repetitions+" iteracji scen 2.", "Flyway Scen. 2 ", 0, 0, -1, 0, 0, 0);
 
-        return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "Flyway-AVG-"+repetitions+" iteracji scen. 2 (6. ctx)", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
+        return new TestResult("Flyway-AVG-"+repetitions+" iteracji", "Flyway-AVG-"+repetitions+" iteracji scen. 2 ", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
     }
 
     public TestResult runLiquibaseScenario(String context) {
@@ -312,10 +317,10 @@ public class MigrationService {
             double avgCpu = monitor.getAverageCpu();
             long avgMemory = monitor.getAverageMemory();
 
-            return new TestResult("Liquibase", context, duration, 0, 0, countLiquibaseLines(context), avgCpu, avgMemory);
+            return new TestResult("Liquibase", "Liquibase" + context, duration, 0, 0, countLiquibaseLines(context), avgCpu, avgMemory);
         } catch (Exception e) {
             e.printStackTrace();
-            return new TestResult("Liquibase", context, 0, 0, -1, 0, 0, 0);
+            return new TestResult("Liquibase", "Liquibase" + context, 0, 0, -1, 0, 0, 0);
         }
     }
 
@@ -344,9 +349,9 @@ public class MigrationService {
             double avgCpu = monitor.getAverageCpu();
             long avgMemory = monitor.getAverageMemory();
 
-            return new TestResult("Liquibase-Rollback", context, 0, rollbackTime, 0, countLiquibaseLines(context), avgCpu, avgMemory);
+            return new TestResult("Liquibase-Rollback", "Liquibase Rollback" + context, 0, rollbackTime, 0, countLiquibaseLines(context), avgCpu, avgMemory);
         } catch (Exception e) {
-            return new TestResult("Liquibase-Rollback", context, 0, 0, -1, 0, 0, 0);
+            return new TestResult("Liquibase-Rollback", "Liquibase Rollback" + context, 0, 0, -1, 0, 0, 0);
         }
     }
 
@@ -381,8 +386,8 @@ public class MigrationService {
     }
 
     public TestResult runLiquibaseScenario1() {
-        List<String> contexts = List.of("1", "2", "3", "4", "5");
-        List<String> contextsRB = List.of("5", "4", "3", "2", "1");
+        List<String> contexts = List.of("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13");
+        List<String> contextsRB = List.of("13", "12", "11", "10", "9", "8", "7", "6", "5", "4", "3", "2", "1");
         long totalMigrationTime = 0;
         long totalRollbackTime  = 0;
 
@@ -414,15 +419,17 @@ public class MigrationService {
                 totalLines += countLiquibaseLines(ctx);
             }
 
-            return new TestResult("Liquibase-Group1-5", "1-5", totalMigrationTime, totalRollbackTime,  0, totalLines, avgCpu,  avgMemory
+            return new TestResult("Liquibase-Group1-5", "Liquibase-Group1-10", totalMigrationTime, totalRollbackTime,  0, totalLines, avgCpu,  avgMemory
             );
         } catch (Exception e) {
             e.printStackTrace();
-            return new TestResult("Liquibase-Group1-5", "1-5", 0, 0, -1, 0, 0, 0);
+            return new TestResult("Liquibase-Group1-5", "Liquibase-Group1-10", 0, 0, -1, 0, 0, 0);
         }
     }
 
     public TestResult runLiquibaseScenario2() {
+        List<String> contexts = List.of("14", "15", "16", "17", "18", "19", "20", "21", "22", "23");
+        List<String> contextsRB = List.of("23", "22", "21", "20", "19", "18", "17", "16", "15", "14");
         long totalMigrationTime = 0;
         long totalRollbackTime  = 0;
 
@@ -431,13 +438,17 @@ public class MigrationService {
             ResourceMonitor monitor = new ResourceMonitor();
             monitor.start();
 
-            long start = System.nanoTime();
-            lb.update("6");
-            totalMigrationTime += System.nanoTime() - start;
+            for (String ctx : contexts) {
+                long start = System.nanoTime();
+                lb.update(ctx);
+                totalMigrationTime += System.nanoTime() - start;
+            }
 
-            long rstart = System.nanoTime();
-            lb.rollback(1, "6");
-            totalRollbackTime += System.nanoTime() - rstart;
+            for (String ctx : contextsRB) {
+                long rstart = System.nanoTime();
+                lb.rollback(1, ctx);
+                totalRollbackTime += System.nanoTime() - rstart;
+            }
 
             monitor.stop();
             Thread.sleep(200);
@@ -446,14 +457,15 @@ public class MigrationService {
             long avgMemory = monitor.getAverageMemory();
 
             int totalLines = 0;
-            totalLines += countLiquibaseLines("6");
+            for (String ctx : contexts) {
+                totalLines += countLiquibaseLines(ctx);
+            }
 
-
-            return new TestResult("Liquibase-Group6", "6", totalMigrationTime, totalRollbackTime,  0, totalLines, avgCpu,  avgMemory
+            return new TestResult("Liquibase-Group_scen2-14-23", "Liquibase-scen2-Group14-23", totalMigrationTime, totalRollbackTime,  0, totalLines, avgCpu,  avgMemory
             );
         } catch (Exception e) {
             e.printStackTrace();
-            return new TestResult("Liquibase-Group6", "6", 0, 0, -1, 0, 0, 0);
+            return new TestResult("Liquibase-Group-scen2-14-23", "Liquibase-Group-scen2-14-23", 0, 0, -1, 0, 0, 0);
         }
     }
 
@@ -483,7 +495,7 @@ public class MigrationService {
             System.out.println(">>> Liquibase.runLiquibaseScenario1Average - " + i + " - done");
         }
 
-        if (successCount == 0) return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "1-5", 0, 0, -1, 0, 0, 0);
+        if (successCount == 0) return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "Liquibase-AVG-"+repetitions+" iteracji scen. 1", 0, 0, -1, 0, 0, 0);
 
         return new TestResult("Liquibase-AVG-"+repetitions+" iteracji", "Liquibase-AVG-"+repetitions+" iteracji scen. 1", sumMigrationTime / successCount, sumRollbackTime / successCount, 0, sumLines / successCount, sumCpu / successCount, sumMemory / successCount, ((double) successCount / repetitions) * 100.0);
     }
@@ -531,10 +543,24 @@ public class MigrationService {
             case "5":
                 return "V6__drop_legacy_name_column.sql";
             case "6":
-                return "V7__big_table.sql";
+                return "V7__split_name_columns.sql";
+            case "7":
+                return "V8__create_name_sync_function.sql";
+            case "8":
+                return "V9__create_name_sync_trigger.sql";
+            case "9":
+                return "V10__add_indexes.sql";
+            case "10":
+                return "V11__create_audit_table.sql";
+            case "11":
+                return "V12__create_audit_trigger.sql";
+            case "12":
+                return "V13__change_type_error.sql";
+            case "13":
+                return "V14__big_table.sql";
             default:
                 throw new IllegalArgumentException(
-                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"6\"."
+                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"13\"."
                 );
         }
     }
@@ -551,10 +577,24 @@ public class MigrationService {
             case "5":
                 return "U6__undo_init_person.sql";
             case "6":
-                return "U7__undo_create_big_table.sql";
+                return "U7__undo_split_name_columns.sql";
+            case "7":
+                return "U8__undo_create_name_sync_function.sql";
+            case "8":
+                return "U9__undo_create_name_sync_trigger.sql";
+            case "9":
+                return "U10__undo_add_indexes.sql";
+            case "10":
+                return "U11__undo_create_audit_table.sql";
+            case "11":
+                return "U12__undo_create_audit_trigger.sql";
+            case "12":
+                return "U13__undo_change_type_error.sql";
+            case "13":
+                return "U14__undo_create_big_table.sql";
             default:
                 throw new IllegalArgumentException(
-                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"6\"."
+                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"13\"."
                 );
         }
     }

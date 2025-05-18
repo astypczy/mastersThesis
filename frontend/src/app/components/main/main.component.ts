@@ -28,6 +28,8 @@ export class MainComponent {
   scenario1_iter_fw = 1;
   rollbackContext_lb= 1;
   rollbackContext_fw = 1;
+  selectedStep_lb: number = 1;
+  selectedStep_fw: number = 1;
 
   constructor(
     private migrationService: MigrationService,

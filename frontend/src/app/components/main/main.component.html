@@ -30,11 +30,22 @@
       Wykonaj scenariusz 2. {{ scenario2_iter_lb }} razy
     </button>
   </div>
-  <div class="liquibase-buttons">
-    <button *ngFor="let i of [1,2,3,4,5,6]" (click)="runLiquibaseStep(i)">
-      Kontekst {{ i }}
-    </button>
+  <div class="liquibase-input">
+    <label for="stepInput">Wpisz numer kroku (1–23):</label>
+    <input id="stepInput" type="number" [(ngModel)]="selectedStep_lb" min="1" max="23"/>
+
+    <div *ngIf="selectedStep_lb >= 1 && selectedStep_lb <= 23">
+      <p>
+        Wybrany krok: {{ selectedStep_lb }}<br />
+        Scenariusz:
+        <strong>{{ selectedStep_lb <= 13 ? '1. Scenariusz' : '2. Scenariusz' }}</strong>
+      </p>
+      <button (click)="runLiquibaseStep(selectedStep_lb)">
+        Uruchom krok {{ selectedStep_lb }}
+      </button>
+    </div>
   </div>
+
 
   <table *ngIf="resultsLiquibase.length" class="table table-bordered">
     <caption>Wyniki Liquibase</caption>
@@ -61,12 +72,19 @@
 
 <section>
   <h2>Rollback Liquibase</h2>
-  <label for="rollback-context-lb">Wpisz kontekst (1–6):</label>
-  <input id="rollback-context-lb" type="number" min="1" max="6" [(ngModel)]="rollbackContext_lb" />
+  <label for="rollback-context-lb">Wpisz kontekst (1–23):</label>
+  <input id="rollback-context-lb" type="number" min="1" max="23" [(ngModel)]="rollbackContext_lb"/>
 
-  <button (click)="runLiquibaseRollback(rollbackContext_lb)">
-    Wykonaj rollback kontekstu {{ rollbackContext_lb }}
-  </button>
+  <div *ngIf="rollbackContext_lb >= 1 && rollbackContext_lb <= 23">
+    <p>
+      Wybrany kontekst: {{ rollbackContext_lb }}<br />
+      Scenariusz:
+      <strong>{{ rollbackContext_lb <= 13 ? '1. Scenariusz' : '2. Scenariusz' }}</strong>
+    </p>
+    <button (click)="runLiquibaseRollback(rollbackContext_lb)">
+      Wykonaj rollback kontekstu {{ rollbackContext_lb }}
+    </button>
+  </div>
 
 
   <div *ngIf="rollbackResultLiquibase">
@@ -111,10 +129,21 @@
       Wykonaj scenariusz 2. {{ scenario2_iter_fw }} razy
     </button>
   </div>
-  <div class="flyway-buttons">
-    <button *ngFor="let i of [1,2,3,4,5,6]" (click)="runFlywayStep(i)">
-      Kontekst {{ i }}
-    </button>
+
+  <div class="flyway-input">
+    <label for="stepInput_fw">Wpisz numer kroku (1–23):</label>
+    <input id="stepInput_fw" type="number" [(ngModel)]="selectedStep_fw" min="1" max="23"/>
+
+    <div *ngIf="selectedStep_fw >= 1 && selectedStep_fw <= 23">
+      <p>
+        Wybrany krok: {{ selectedStep_fw }}<br />
+        Scenariusz:
+        <strong>{{ selectedStep_fw <= 13 ? '1. Scenariusz' : '2. Scenariusz' }}</strong>
+      </p>
+      <button (click)="runFlywayStep(selectedStep_fw)">
+        Uruchom krok {{ selectedStep_fw }}
+      </button>
+    </div>
   </div>
 
   <table *ngIf="resultsFlyway.length" class="table table-bordered">
@@ -142,13 +171,19 @@
 
 <section>
   <h2>Rollback Flyway</h2>
-  <label for="rollback-context-fw">Wpisz kontekst (1–6):</label>
-  <input id="rollback-context-fw" type="number" min="1" max="6" [(ngModel)]="rollbackContext_fw" />
+    <label for="rollback-context-fw">Wpisz kontekst (1–23):</label>
+  <input id="rollback-context-fw" type="number" min="1" max="23" [(ngModel)]="rollbackContext_fw"/>
 
-  <button (click)="runFlywayRollback(rollbackContext_fw)">
-    Wykonaj rollback kontekstu {{ rollbackContext_fw }}
-  </button>
-
+  <div *ngIf="rollbackContext_fw >= 1 && rollbackContext_fw <= 23">
+    <p>
+      Wybrany kontekst: {{ rollbackContext_fw }}<br />
+      Scenariusz:
+      <strong>{{ rollbackContext_fw <= 13 ? '1. Scenariusz' : '2. Scenariusz' }}</strong>
+    </p>
+    <button (click)="runFlywayRollback(rollbackContext_fw)">
+      Wykonaj rollback kontekstu {{ rollbackContext_fw }}
+    </button>
+  </div>
 
   <div *ngIf="rollbackResultFlyway">
     <h3>Wynik rollbacku</h3>
