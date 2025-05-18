@@ -87,6 +87,15 @@ jobs:
         run: |
           echo ">>> Running manual rollback for Group 1–13"
           for script in \
+            U24__undo_analyze_big_table.sql \
+            U23__undo_insert_batch_5.sql \
+            U22__undo_delete_batch_2.sql \
+            U21__undo_insert_batch_4.sql \
+            U20__undo_delete_batch_1.sql \
+            U19__undo_insert_batch_3.sql \
+            U18__undo_update_extra_cols.sql \
+            U17__undo_insert_batch_2.sql \
+            U16__undo_insert_batch_1.sql \
             U15__undo_create_big_table.sql \
             U14__undo_change_type_error.sql \
             U13__undo_create_audit_trigger.sql \
@@ -105,7 +114,7 @@ jobs:
             psql -h localhost -U postgres -d mastersThesis -f backend/src/main/resources/db/migration/$script
           done
           echo "Cleaning flyway_schema_history manually..."
-          for ver in 15 14 13 12 11 10 9 8 7 6 5 4 3 2
+          for ver in 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2
           do
             psql -h localhost -U postgres -d mastersThesis \
               -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"

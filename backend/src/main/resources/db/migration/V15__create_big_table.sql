@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS big_table (id SERIAL PRIMARY KEY);
+
+DO $$
+BEGIN
+FOR i IN 1..50 LOOP
+    EXECUTE format(
+      'ALTER TABLE big_table ADD COLUMN IF NOT EXISTS col%s VARCHAR(50);',
+      i
+    );
+END LOOP;
+END;
+$$;
+

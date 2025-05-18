@@ -262,10 +262,10 @@ public class MigrationService {
             double avgCpu = monitor.getAverageCpu();
             long avgMemory = monitor.getAverageMemory();
 
-            return new TestResult("Flyway-Group14-23", "Flyway scen 1 14-23", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
+            return new TestResult("Flyway-Group14-23", "Flyway scen 2 14-23", totalMigrationTime, totalRollbackTime, 0, totalLines, avgCpu, avgMemory);
         } catch (Exception e) {
             e.printStackTrace();
-            return new TestResult("Flyway-Group14-23", "Flyway scen 1 14-23", 0, 0, -1, 0, 0, 0);
+            return new TestResult("Flyway-Group14-23", "Flyway scen 2 14-23", 0, 0, -1, 0, 0, 0);
         }
     }
     public TestResult runFlywayScenario2Average(int repetitions) {
@@ -559,10 +559,28 @@ public class MigrationService {
             case "13":
                 return "V14__change_type_error.sql";
             case "14":
-                return "V15__big_table.sql";
+                return "V15__create_big_table.sql";
+            case "15":
+                return "V16__insert_batch_1.sql";
+            case "16":
+                return "V17__insert_batch_2.sql";
+            case "17":
+                return "V18__update_extra_cols.sql";
+            case "18":
+                return "V19__insert_batch_3.sql";
+            case "19":
+                return "V20__delete_batch_1.sql";
+            case "20":
+                return "V21__insert_batch_4.sql";
+            case "21":
+                return "V22__delete_batch_2.sql";
+            case "22":
+                return "V23__insert_batch_5";
+            case "23":
+                return "V24__analyze_big_table.sql";
             default:
                 throw new IllegalArgumentException(
-                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"13\"."
+                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"23\"."
                 );
         }
     }
@@ -596,9 +614,27 @@ public class MigrationService {
                 return "U14__undo_change_type_error.sql";
             case "14":
                 return "U15__undo_create_big_table.sql";
+            case "15":
+                return "U16__undo_insert_batch_1.sql";
+            case "16":
+                return "U17__undo_insert_batch_2.sql";
+            case "17":
+                return "U18__undo_update_extra_cols.sql";
+            case "18":
+                return "U19__undo_insert_batch_3.sql";
+            case "19":
+                return "U20__undo_delete_batch_1.sql";
+            case "20":
+                return "U21__undo_insert_batch_4.sql";
+            case "21":
+                return "U22__undo_delete_batch_2.sql";
+            case "22":
+                return "U23__undo_insert_batch_5.sql";
+            case "23":
+                return "U24__undo_analyze_big_table.sql";
             default:
                 throw new IllegalArgumentException(
-                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"13\"."
+                        "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"23\"."
                 );
         }
     }

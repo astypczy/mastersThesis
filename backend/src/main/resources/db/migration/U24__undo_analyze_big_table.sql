@@ -1,0 +1,1 @@
+-- no-op: ANALYZE has no undo

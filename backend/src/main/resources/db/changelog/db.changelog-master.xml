@@ -299,20 +299,20 @@ $$;
     <changeSet id="15-insert-batch-1" author="dev" context="15" runAlways="true">
         <sql>
             INSERT INTO big_table (col1)
-            SELECT md5(random()::text) FROM generate_series(1,50000);
+            SELECT md5(random()::text) FROM generate_series(1,20000);
         </sql>
         <rollback>
-            <sql>DELETE FROM big_table WHERE id BETWEEN 1 AND 50000;</sql>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 1 AND 20000;</sql>
         </rollback>
     </changeSet>
 
     <changeSet id="16-insert-batch-2" author="dev" context="16" runAlways="true">
         <sql>
             INSERT INTO big_table (col1)
-            SELECT md5(random()::text) FROM generate_series(1,50000);
+            SELECT md5(random()::text) FROM generate_series(1,20000);
         </sql>
         <rollback>
-            <sql>DELETE FROM big_table WHERE id BETWEEN 50001 AND 100000;</sql>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 20001 AND 40000;</sql>
         </rollback>
     </changeSet>
 
@@ -350,10 +350,10 @@ $$;
         <sql>
             INSERT INTO big_table (col1, col2, col3)
             SELECT md5(random()::text), md5(random()::text), md5(random()::text)
-            FROM generate_series(1,50000);
+            FROM generate_series(1,20000);
         </sql>
         <rollback>
-            <sql>DELETE FROM big_table WHERE id BETWEEN 100001 AND 150000;</sql>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 40001 AND 60000;</sql>
         </rollback>
     </changeSet>
 
@@ -369,10 +369,10 @@ $$;
     <changeSet id="20-insert-batch-4" author="dev" context="20" runAlways="true">
         <sql>
             INSERT INTO big_table (col1)
-            SELECT md5(random()::text) FROM generate_series(1,50000);
+            SELECT md5(random()::text) FROM generate_series(1,20000);
         </sql>
         <rollback>
-            <sql>DELETE FROM big_table WHERE id BETWEEN 150001 AND 200000;</sql>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 60001 AND 80000;</sql>
         </rollback>
     </changeSet>
 
@@ -388,10 +388,10 @@ $$;
     <changeSet id="22-insert-batch-5" author="dev" context="22" runAlways="true">
         <sql>
             INSERT INTO big_table (col1)
-            SELECT md5(random()::text) FROM generate_series(1,50000);
+            SELECT md5(random()::text) FROM generate_series(1,20000);
         </sql>
         <rollback>
-            <sql>DELETE FROM big_table WHERE id BETWEEN 200001 AND 250000;</sql>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 80001 AND 100000;</sql>
         </rollback>
     </changeSet>
 
