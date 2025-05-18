@@ -543,21 +543,23 @@ public class MigrationService {
             case "5":
                 return "V6__drop_legacy_name_column.sql";
             case "6":
-                return "V7__split_name_columns.sql";
+                return "V7__disable_legacy_trigger.sql";
             case "7":
-                return "V8__create_name_sync_function.sql";
+                return "V8__split_name_columns.sql";
             case "8":
-                return "V9__create_name_sync_trigger.sql";
+                return "V9__create_name_sync_function.sql";
             case "9":
-                return "V10__add_indexes.sql";
+                return "V10__create_name_sync_trigger.sql";
             case "10":
-                return "V11__create_audit_table.sql";
+                return "V11__add_indexes.sql";
             case "11":
-                return "V12__create_audit_trigger.sql";
+                return "V12__create_audit_table.sql";
             case "12":
-                return "V13__change_type_error.sql";
+                return "V13__create_audit_trigger.sql";
             case "13":
-                return "V14__big_table.sql";
+                return "V14__change_type_error.sql";
+            case "14":
+                return "V15__big_table.sql";
             default:
                 throw new IllegalArgumentException(
                         "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"13\"."
@@ -577,21 +579,23 @@ public class MigrationService {
             case "5":
                 return "U6__undo_init_person.sql";
             case "6":
-                return "U7__undo_split_name_columns.sql";
+                return "U7__undo_disable_legacy_trigger.sql";
             case "7":
-                return "U8__undo_create_name_sync_function.sql";
+                return "U8__undo_split_name_columns.sql";
             case "8":
-                return "U9__undo_create_name_sync_trigger.sql";
+                return "U9__undo_create_name_sync_function.sql";
             case "9":
-                return "U10__undo_add_indexes.sql";
+                return "U10__undo_create_name_sync_trigger.sql";
             case "10":
-                return "U11__undo_create_audit_table.sql";
+                return "U11__undo_add_indexes.sql";
             case "11":
-                return "U12__undo_create_audit_trigger.sql";
+                return "U12__undo_create_audit_table.sql";
             case "12":
-                return "U13__undo_change_type_error.sql";
+                return "U13__undo_create_audit_trigger.sql";
             case "13":
-                return "U14__undo_create_big_table.sql";
+                return "U14__undo_change_type_error.sql";
+            case "14":
+                return "U15__undo_create_big_table.sql";
             default:
                 throw new IllegalArgumentException(
                         "Nieznany kontekst: " + context + ". Oczekiwano wartości od \"1\" do \"13\"."
