@@ -73,52 +73,102 @@ jobs:
           chmod +x $HOME/flyway-${FLYWAY_VERSION}/flyway
           echo "$HOME/flyway-${FLYWAY_VERSION}" >> $GITHUB_PATH
 
-      - name: Flyway migrate
+      - name: Run Flyway migrations & rollbacks
         run: |
-          flyway \
-            -url="$DB_URL" \
-            -user="$DB_USER" \
-            -password="$DB_PASS" \
-            -baselineOnMigrate=true \
-            -locations=filesystem:backend/src/main/resources/db/migration \
-            migrate
+          mkdir -p metricsFlyway
 
-      - name: Manual Flyway rollback 
-        run: |
-          echo ">>> Running manual rollback for Group 1–13"
-          for script in \
-            U24__undo_analyze_big_table.sql \
-            U23__undo_insert_batch_5.sql \
-            U22__undo_delete_batch_2.sql \
-            U21__undo_insert_batch_4.sql \
-            U20__undo_delete_batch_1.sql \
-            U19__undo_insert_batch_3.sql \
-            U18__undo_update_extra_cols.sql \
-            U17__undo_insert_batch_2.sql \
-            U16__undo_insert_batch_1.sql \
-            U15__undo_create_big_table.sql \
-            U14__undo_change_type_error.sql \
-            U13__undo_create_audit_trigger.sql \
-            U12__undo_create_audit_table.sql \
-            U11__undo_add_indexes.sql \
-            U10__undo_create_name_sync_trigger.sql \
-            U9__undo_create_name_sync_function.sql \
-            U8__undo_split_name_columns.sql \
-            U7__undo_disable_legacy_trigger.sql \
-            U6__undo_init_person.sql \
-            U5__undo_create_person_name_sync_trigger.sql \
-            U4__undo_create_person_name_sync_function.sql \
-            U3__undo_copy_legacy_to_new.sql \
-            U2__undo_add_new_name.sql
+          for iter in {1..10}
           do
-            psql -h localhost -U postgres -d mastersThesis -f backend/src/main/resources/db/migration/$script
+            # measure each step with timestamp and exit code
+            for ctx in 1 2 3 4 5 6 7 8 9 10 11 12 13; do
+              START=$(date +%s%N)
+              $HOME/flyway-10.20.1/flyway -url="$DB_URL" -user="$DB_USER" -password="$DB_PASS" \
+                -baselineOnMigrate=true -target=$((ctx+1)) migrate
+              STATUS=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              echo "Flyway - Scen. 1,$ctx,$DURATION,0,$STATUS,${ctx}Lines" >> metrics/flyway.csv
+            done
+
+            for ctx in 14 15 16 17 18 19 20 21 22 23; do
+              START=$(date +%s%N)
+              $HOME/flyway-10.20.1/flyway -url="$DB_URL" -user="$DB_USER" -password="$DB_PASS" \
+                -baselineOnMigrate=true -target=$((ctx+1)) migrate
+              STATUS=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              echo "Flyway - Scen. 2,$ctx,$DURATION,0,$STATUS,${ctx}Lines" >> metrics/flyway.csv
+            done
+
+            for ctx in 23 22 21 20 19 18 17 16 15 14; do
+              # manual undo:
+              UNDO=U$((ctx+1))__undo_*.sql
+              START_R=$(date +%s%N)
+              psql -h localhost -U postgres -d mastersThesis -f src/main/resources/db/migration/$UNDO
+              psql -h localhost -U postgres -d mastersThesis \
+                -c "DELETE FROM flyway_schema_history WHERE version='$((ctx+1))';"
+              DURATION_R=$(( $(date +%s%N) - START_R ))
+              echo "Flyway-R - Scen. 2,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/flyway.csv
+            done
+
+            for ctx in 13 12 11 10 9 8 7 6 5 4 3 2 1; do
+              # manual undo:
+              UNDO=U$((ctx+1))__undo_*.sql
+              START_R=$(date +%s%N)
+              psql -h localhost -U postgres -d mastersThesis -f src/main/resources/db/migration/$UNDO
+              psql -h localhost -U postgres -d mastersThesis \
+                -c "DELETE FROM flyway_schema_history WHERE version='$((ctx+1))';"
+              DURATION_R=$(( $(date +%s%N) - START_R ))
+              echo "Flyway-R - Scen. 1,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/flyway.csv
+            done
           done
-          echo "Cleaning flyway_schema_history manually..."
-          for ver in 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2
-          do
-            psql -h localhost -U postgres -d mastersThesis \
-              -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
-          done
+        env:
+          PGHOST: localhost
+
+      # - name: Flyway migrate
+      #   run: |
+      #     flyway \
+      #       -url="$DB_URL" \
+      #       -user="$DB_USER" \
+      #       -password="$DB_PASS" \
+      #       -baselineOnMigrate=true \
+      #       -locations=filesystem:backend/src/main/resources/db/migration \
+      #       migrate
+
+      # - name: Manual Flyway rollback 
+      #   run: |
+      #     echo ">>> Running manual rollback for Group 1–13"
+      #     for script in \
+      #       U24__undo_analyze_big_table.sql \
+      #       U23__undo_insert_batch_5.sql \
+      #       U22__undo_delete_batch_2.sql \
+      #       U21__undo_insert_batch_4.sql \
+      #       U20__undo_delete_batch_1.sql \
+      #       U19__undo_insert_batch_3.sql \
+      #       U18__undo_update_extra_cols.sql \
+      #       U17__undo_insert_batch_2.sql \
+      #       U16__undo_insert_batch_1.sql \
+      #       U15__undo_create_big_table.sql \
+      #       U14__undo_change_type_error.sql \
+      #       U13__undo_create_audit_trigger.sql \
+      #       U12__undo_create_audit_table.sql \
+      #       U11__undo_add_indexes.sql \
+      #       U10__undo_create_name_sync_trigger.sql \
+      #       U9__undo_create_name_sync_function.sql \
+      #       U8__undo_split_name_columns.sql \
+      #       U7__undo_disable_legacy_trigger.sql \
+      #       U6__undo_init_person.sql \
+      #       U5__undo_create_person_name_sync_trigger.sql \
+      #       U4__undo_create_person_name_sync_function.sql \
+      #       U3__undo_copy_legacy_to_new.sql \
+      #       U2__undo_add_new_name.sql
+      #     do
+      #       psql -h localhost -U postgres -d mastersThesis -f backend/src/main/resources/db/migration/$script
+      #     done
+      #     echo "Cleaning flyway_schema_history manually..."
+      #     for ver in 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2
+      #     do
+      #       psql -h localhost -U postgres -d mastersThesis \
+      #         -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
+      #     done
 
       - name: Install Liquibase via APT
         run: |
@@ -131,27 +181,71 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y liquibase
 
-      - name: Liquibase Update
+      - name: Run Liquibase migrations & rollbacks
         run: |
-          liquibase \
-            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            --url=$DB_URL \
-            --username=$DB_USER \
-            --password=$DB_PASS \
-            update
+          mkdir -p metricsLiquibase
+          for iter in {1..10}
+          do
+            for ctx in 1 2 3 4 5 6 7 8 9 10 11 12 13; do
+              START=$(date +%s%N)
+              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+                update $ctx
+              DURATION=$(( $(date +%s%N) - START ))
+              echo "Liquibase - Scen. 1,$ctx,$DURATION,0,0,${ctx}Lines" >> metrics/liquibase.csv
+            done
+
+            for ctx in 14 15 16 17 18 19 20 21 22 23; do
+              START=$(date +%s%N)
+              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+                update $ctx
+              DURATION=$(( $(date +%s%N) - START ))
+              echo "Liquibase - Scen. 2,$ctx,$DURATION,0,0,${ctx}Lines" >> metrics/liquibase.csv
+            done
+
+            for ctx in 23 22 21 20 19 18 17 16 15 14; do
+              START_R=$(date +%s%N)
+              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+                rollbackCount 1 $ctx
+              DURATION_R=$(( $(date +%s%N) - START_R ))
+              echo "Liquibase-R - Scen. 2,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/liquibase.csv
+            done
+
+            for ctx in 13 12 11 10 9 8 7 6 5 4 3 2 1; do
+              START_R=$(date +%s%N)
+              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+                rollbackCount 1 $ctx
+              DURATION_R=$(( $(date +%s%N) - START_R ))
+              echo "Liquibase-R - Scen. 1,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/liquibase.csv
+            done
+          done
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
 
-      - name: Liquibase Rollback Count (host)
-        run: |
-          liquibase \
-            --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            --url=$DB_URL \
-            --username=$DB_USER \
-            --password=$DB_PASS \
-            rollback-count --count=23
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+      # - name: Liquibase Update
+      #   run: |
+      #     liquibase \
+      #       --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+      #       --url=$DB_URL \
+      #       --username=$DB_USER \
+      #       --password=$DB_PASS \
+      #       update
+      #   env:
+      #     JAVA_HOME: ${{ env.JAVA_HOME }}
+
+      # - name: Liquibase Rollback Count (host)
+      #   run: |
+      #     liquibase \
+      #       --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+      #       --url=$DB_URL \
+      #       --username=$DB_USER \
+      #       --password=$DB_PASS \
+      #       rollback-count --count=23
+      #   env:
+      #     JAVA_HOME: ${{ env.JAVA_HOME }}
 
       # - name: Run unit tests
       #   working-directory: backend
