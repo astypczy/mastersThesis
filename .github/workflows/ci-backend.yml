@@ -164,6 +164,7 @@ jobs:
       - name: Run Liquibase migrations & rollbacks
         shell: bash
         run: |
+          set +e
           for iter in {1..2}; do
             for ctx in {1..13}; do
               START=$(date +%s%N)
