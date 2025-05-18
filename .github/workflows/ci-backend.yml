@@ -123,34 +123,45 @@ jobs:
               echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
 
+            # Scenariusz 2: rollback 24→15 ręcznie
             for ctx in {24..15}; do
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
               START=$(date +%s%N)
-              $HOME/flyway-10.20.1/flyway \
-                -url="$DB_URL" \
-                -user="$DB_USER" \
-                -password="$DB_PASS" \
-                -baselineOnMigrate=true \
-                -locations=filesystem:backend/src/main/resources/db/migration \
-                undo -target="${ctx}"
-              EXIT=$?
+              psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+              # usuń wpis z historii, jeżeli tabela istnieje
+              psql -h localhost -U postgres -d mastersThesis <<EOF
+              DO $$
+              BEGIN
+                IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
+                  DELETE FROM flyway_schema_history WHERE version = '$ctx';
+                END IF;
+              END
+              $$;
+              EOF
               DURATION=$(( $(date +%s%N) - START ))
-              LINES=$(wc -l backend/src/main/resources/db/migration/U${ctx}__*.sql | awk '{print $1}')
-              echo "Flyway-R,Scen2,${ctx},0,${DURATION},${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
+              LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+              echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+                >> metricsFlyway/flyway.csv
             done
 
+            # Scenariusz 1: rollback 14→2 ręcznie
             for ctx in {14..2}; do
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
               START=$(date +%s%N)
-              $HOME/flyway-10.20.1/flyway \
-                -url="$DB_URL" \
-                -user="$DB_USER" \
-                -password="$DB_PASS" \
-                -baselineOnMigrate=true \
-                -locations=filesystem:backend/src/main/resources/db/migration \
-                undo -target="${ctx}"
-              EXIT=$?
+              psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+              psql -h localhost -U postgres -d mastersThesis <<EOF
+              DO $$
+              BEGIN
+                IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
+                  DELETE FROM flyway_schema_history WHERE version = '$ctx';
+                END IF;
+              END
+              $$;
+              EOF
               DURATION=$(( $(date +%s%N) - START ))
-              LINES=$(wc -l backend/src/main/resources/db/migration/U${ctx}__*.sql | awk '{print $1}')
-              echo "Flyway-R,Scen1,${ctx},0,${DURATION},${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
+              LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+              echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+                >> metricsFlyway/flyway.csv
             done
           done
         env:
