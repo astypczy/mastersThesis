@@ -93,43 +93,43 @@ jobs:
         run: |
           for iter in {1..10}; do
             for ctx in {1..13}; do
-              MIG_SQL="backend/src/main/resources/db/migration/V${ctx}__*.sql"
+              MIG_SQL="backend/src/main/resources/db/migration/V${ctx+1}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $MIG_SQL
               EXIT=$?
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $MIG_SQL | awk '{print $1}')
-              echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
+              echo "Flyway,Scen1,${ctx+1},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
 
             for ctx in {14..23}; do
-              MIG_SQL="backend/src/main/resources/db/migration/V${ctx}__*.sql"
+              MIG_SQL="backend/src/main/resources/db/migration/V${ctx+1}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $MIG_SQL
               EXIT=$?
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $MIG_SQL | awk '{print $1}')
-              echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
+              echo "Flyway,Scen2,${ctx+1},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
             psql -h localhost -U postgres -d mastersThesis -c "SELECT * FROM flyway_schema_history;"
             for ctx in {23..14}; do
-              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx+1}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-              psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version='${ctx}';"
+              psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version='${ctx+1}';"
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
-              echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
+              echo "Flyway-R,Scen2,${ctx+1},0,${DURATION},0,${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
 
             for ctx in {13..1}; do
-              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx+1}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-              psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version='${ctx}';"
+              psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version='${ctx+1}';"
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
-              echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
+              echo "Flyway-R,Scen1,${ctx+1},0,${DURATION},0,${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
           done
         env:

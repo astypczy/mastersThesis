@@ -45,6 +45,10 @@ export class MigrationService {
     return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/6/${iter}`);
   }
 
+  runTestsLiquibaseS2(): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Liquibase/scenario2/`);
+  }
+
   runTestsFlywayS1(): Observable<TestResult[]> {
     return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/scenario1`);
   }
@@ -58,11 +62,15 @@ export class MigrationService {
   }
 
   runFlywayScenario2_Iterations(iter: number): Observable<TestResult[]> {
-    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/6/${iter}`);
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/scenario2/${iter}`);
   }
 
   runFlywayRollback(rollbackContext: number): Observable<TestResult> {
     return this.http.get<TestResult>(`${this.apiUrl}/api/run-tests/Flyway/rollback/${rollbackContext}`);
+  }
+
+  runTestsFlywayS2(): Observable<TestResult[]> {
+    return this.http.get<TestResult[]>(`${this.apiUrl}/api/run-tests/Flyway/scenario2`);
   }
 }
 

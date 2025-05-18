@@ -18,9 +18,13 @@ public class MigrationController {
     public List<TestResult> runTestsLiquibaseById(@PathVariable String id) {
         return List.of(migrationService.runLiquibaseScenario(id));
     }
-    @GetMapping("/run-tests/Liquibase/6/{n}")
+    @GetMapping("/run-tests/Liquibase/scenario2/{n}")
     public List<TestResult> runLiquibaseScenario2Average(@PathVariable String n) {
         return List.of(migrationService.runLiquibaseScenario2Average(Integer.parseInt(n)));
+    }
+    @GetMapping("/run-tests/Liquibase/scenario2")
+    public List<TestResult> runLiquibaseScenario2() {
+        return List.of(migrationService.runLiquibaseScenario2());
     }
     @GetMapping("/run-tests/Liquibase/scenario1")
     public List<TestResult> runTestsLiquibaseScenario1() {
@@ -42,9 +46,13 @@ public class MigrationController {
     public List<TestResult> runTestsFlywayById(@PathVariable String id) {
         return List.of(migrationService.runFlywayScenario(id));
     }
-    @GetMapping("/run-tests/Flyway/6/{n}")
+    @GetMapping("/run-tests/Flyway/scenario2/{n}")
     public List<TestResult> runFlywayScenario2Average(@PathVariable String n) {
         return List.of(migrationService.runFlywayScenario2Average(Integer.parseInt(n)));
+    }
+    @GetMapping("/run-tests/Flyway/scenario2")
+    public List<TestResult> runFlywayScenario2() {
+        return List.of(migrationService.runFlywayScenario2());
     }
     @GetMapping("/run-tests/Flyway/scenario1")
     public List<TestResult> runTestsFlywayScenario1() {

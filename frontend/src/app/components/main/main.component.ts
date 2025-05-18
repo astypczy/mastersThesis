@@ -114,6 +114,16 @@ export class MainComponent {
     });
   }
 
+  runTestsFlywayS2() {
+    this.toastr.info('Wykonywanie Flyway S2', 'Proszę czekać');
+    console.log('Wykonywanie Flyway S2');
+    this.migrationService.runTestsFlywayS2().subscribe(data => {
+      this.toastr.success('Wykonano Flyway S2', 'Sukces');
+      console.log('Wykonano Flyway S2');
+      this.resultsFlyway = data;
+    });
+  }
+
   runFlywayStep(step: number) {
     console.log('Frontend: wywołuję Flyway step', step);
     this.toastr.info('Flyway: Wykonuję krok nr ' + step, 'W toku ...')
@@ -152,6 +162,16 @@ export class MainComponent {
       console.log('Frontend: odpowiedź Flyway rollback', res);
       this.toastr.success('Rollback: Wykonano rollback nr ' + rollbackContext, 'Sukces');
       this.rollbackResultFlyway = res;
+    });
+  }
+
+  runTestsLiquibaseS2() {
+    this.toastr.info('Wykonywanie Liquibase S2', 'Proszę czekać');
+    console.log('Wykonywanie Liquibase S2');
+    this.migrationService.runTestsLiquibaseS2().subscribe(data => {
+      this.toastr.success('Wykonano Liquibase S2', 'Sukces');
+      console.log('Wykonano Liquibase S2');
+      this.resultsLiquibase = data;
     });
   }
 }

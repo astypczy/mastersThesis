@@ -575,7 +575,7 @@ public class MigrationService {
             case "21":
                 return "V22__delete_batch_2.sql";
             case "22":
-                return "V23__insert_batch_5";
+                return "V23__insert_batch_5.sql";
             case "23":
                 return "V24__analyze_big_table.sql";
             default:
