@@ -73,55 +73,179 @@ jobs:
           chmod +x $HOME/flyway-${FLYWAY_VERSION}/flyway
           echo "$HOME/flyway-${FLYWAY_VERSION}" >> $GITHUB_PATH
 
-      - name: Run Flyway migrations & rollbacks
+      - name: Prepare metrics directories & CSVs
         run: |
-          mkdir -p metricsFlyway
+          mkdir -p metricsFlyway metricsLiquibase
+          echo "tool,scenario,ctx,migrationTimeNs,rollbackTimeNs,exitCode,scriptLines,cpuUsage,memoryUsage,successRate" > metricsFlyway/flyway.csv
+          echo "tool,scenario,ctx,migrationTimeNs,rollbackTimeNs,exitCode,scriptLines,cpuUsage,memoryUsage,successRate" > metricsLiquibase/liquibase.csv
 
-          for iter in {1..10}
-          do
-            # measure each step with timestamp and exit code
-            for ctx in 1 2 3 4 5 6 7 8 9 10 11 12 13; do
+      - name: Run Flyway migrations & rollbacks
+        shell: bash
+        run: |
+          for iter in {1..10}; do
+            for ctx in {1..13}; do
+              MIG_SQL="backend/src/main/resources/db/migration/V${ctx}__*.sql"
               START=$(date +%s%N)
-              $HOME/flyway-10.20.1/flyway -url="$DB_URL" -user="$DB_USER" -password="$DB_PASS" \
-                -baselineOnMigrate=true -target=$((ctx+1)) migrate
-              STATUS=$?
+              psql -h localhost -U postgres -d mastersThesis -f $MIG_SQL
+              EXIT=$?
               DURATION=$(( $(date +%s%N) - START ))
-              echo "Flyway - Scen. 1,$ctx,$DURATION,0,$STATUS,${ctx}Lines" >> metrics/flyway.csv
+              LINES=$(wc -l $MIG_SQL | awk '{print $1}')
+              echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
 
-            for ctx in 14 15 16 17 18 19 20 21 22 23; do
+            for ctx in {14..23}; do
+              MIG_SQL="backend/src/main/resources/db/migration/V${ctx}__*.sql"
               START=$(date +%s%N)
-              $HOME/flyway-10.20.1/flyway -url="$DB_URL" -user="$DB_USER" -password="$DB_PASS" \
-                -baselineOnMigrate=true -target=$((ctx+1)) migrate
-              STATUS=$?
+              psql -h localhost -U postgres -d mastersThesis -f $MIG_SQL
+              EXIT=$?
               DURATION=$(( $(date +%s%N) - START ))
-              echo "Flyway - Scen. 2,$ctx,$DURATION,0,$STATUS,${ctx}Lines" >> metrics/flyway.csv
+              LINES=$(wc -l $MIG_SQL | awk '{print $1}')
+              echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
 
-            for ctx in 23 22 21 20 19 18 17 16 15 14; do
-              # manual undo:
-              UNDO=U$((ctx+1))__undo_*.sql
-              START_R=$(date +%s%N)
-              psql -h localhost -U postgres -d mastersThesis -f src/main/resources/db/migration/$UNDO
-              psql -h localhost -U postgres -d mastersThesis \
-                -c "DELETE FROM flyway_schema_history WHERE version='$((ctx+1))';"
-              DURATION_R=$(( $(date +%s%N) - START_R ))
-              echo "Flyway-R - Scen. 2,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/flyway.csv
+            for ctx in {23..14}; do
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+              START=$(date +%s%N)
+              psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+              psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version='${ctx}';"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+              echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
 
-            for ctx in 13 12 11 10 9 8 7 6 5 4 3 2 1; do
-              # manual undo:
-              UNDO=U$((ctx+1))__undo_*.sql
-              START_R=$(date +%s%N)
-              psql -h localhost -U postgres -d mastersThesis -f src/main/resources/db/migration/$UNDO
-              psql -h localhost -U postgres -d mastersThesis \
-                -c "DELETE FROM flyway_schema_history WHERE version='$((ctx+1))';"
-              DURATION_R=$(( $(date +%s%N) - START_R ))
-              echo "Flyway-R - Scen. 1,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/flyway.csv
+            for ctx in {13..1}; do
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+              START=$(date +%s%N)
+              psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+              psql -h localhost -U postgres -d mastersThesis -c "DELETE FROM flyway_schema_history WHERE version='${ctx}';"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+              echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" >> metricsFlyway/flyway.csv
             done
           done
         env:
           PGHOST: localhost
+
+      - name: Install Liquibase via APT
+        run: |
+          wget -O- https://repo.liquibase.com/liquibase.asc \
+            | gpg --dearmor > liquibase-keyring.gpg \
+            && sudo mv liquibase-keyring.gpg /usr/share/keyrings/ \
+            && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/liquibase-keyring.gpg] https://repo.liquibase.com stable main' \
+               | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y liquibase
+
+      - name: Run Liquibase migrations & rollbacks
+        shell: bash
+        run: |
+          for iter in {1..10}; do
+            for ctx in {1..13}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                update --contexts="${ctx}"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -R "changeSet id=\"${ctx}" -c backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              echo "Liquibase,Scen1,${ctx},${DURATION},0,0,${LINES},0,0,100.0" >> metricsLiquibase/liquibase.csv
+            done
+
+            for ctx in {14..23}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                update --contexts="${ctx}"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -R "changeSet id=\"${ctx}" -c backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              echo "Liquibase,Scen2,${ctx},${DURATION},0,0,${LINES},0,0,100.0" >> metricsLiquibase/liquibase.csv
+            done
+
+            for ctx in {23..14}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                rollbackCount 1 --contexts="${ctx}"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -R "changeSet id=\"${ctx}" -c backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              echo "Liquibase-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" >> metricsLiquibase/liquibase.csv
+            done
+
+            for ctx in {13..1}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                rollbackCount 1 --contexts="${ctx}"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -R "changeSet id=\"${ctx}" -c backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              echo "Liquibase-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" >> metricsLiquibase/liquibase.csv
+            done
+          done
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+
+      - name: Upload metrics
+        uses: actions/upload-artifact@v3
+        with:
+          name: flyway-metrics
+          path: metricsFlyway/flyway.csv
+      - uses: actions/upload-artifact@v3
+        with:
+          name: liquibase-metrics
+          path: metricsLiquibase/liquibase.csv
+
+      # - name: Run Flyway migrations & rollbacks
+      #   run: |
+      #     mkdir -p metricsFlyway
+
+      #     for iter in {1..10}
+      #     do
+      #       # measure each step with timestamp and exit code
+      #       for ctx in 1 2 3 4 5 6 7 8 9 10 11 12 13; do
+      #         START=$(date +%s%N)
+      #         $HOME/flyway-10.20.1/flyway -url="$DB_URL" -user="$DB_USER" -password="$DB_PASS" \
+      #           -baselineOnMigrate=true -target=$((ctx+1)) migrate
+      #         STATUS=$?
+      #         DURATION=$(( $(date +%s%N) - START ))
+      #         echo "Flyway - Scen. 1,$ctx,$DURATION,0,$STATUS,${ctx}Lines" >> metrics/flyway.csv
+      #       done
+
+      #       for ctx in 14 15 16 17 18 19 20 21 22 23; do
+      #         START=$(date +%s%N)
+      #         $HOME/flyway-10.20.1/flyway -url="$DB_URL" -user="$DB_USER" -password="$DB_PASS" \
+      #           -baselineOnMigrate=true -target=$((ctx+1)) migrate
+      #         STATUS=$?
+      #         DURATION=$(( $(date +%s%N) - START ))
+      #         echo "Flyway - Scen. 2,$ctx,$DURATION,0,$STATUS,${ctx}Lines" >> metrics/flyway.csv
+      #       done
+
+      #       for ctx in 23 22 21 20 19 18 17 16 15 14; do
+      #         # manual undo:
+      #         UNDO=U$((ctx+1))__undo_*.sql
+      #         START_R=$(date +%s%N)
+      #         psql -h localhost -U postgres -d mastersThesis -f src/main/resources/db/migration/$UNDO
+      #         psql -h localhost -U postgres -d mastersThesis \
+      #           -c "DELETE FROM flyway_schema_history WHERE version='$((ctx+1))';"
+      #         DURATION_R=$(( $(date +%s%N) - START_R ))
+      #         echo "Flyway-R - Scen. 2,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/flyway.csv
+      #       done
+
+      #       for ctx in 13 12 11 10 9 8 7 6 5 4 3 2 1; do
+      #         # manual undo:
+      #         UNDO=U$((ctx+1))__undo_*.sql
+      #         START_R=$(date +%s%N)
+      #         psql -h localhost -U postgres -d mastersThesis -f src/main/resources/db/migration/$UNDO
+      #         psql -h localhost -U postgres -d mastersThesis \
+      #           -c "DELETE FROM flyway_schema_history WHERE version='$((ctx+1))';"
+      #         DURATION_R=$(( $(date +%s%N) - START_R ))
+      #         echo "Flyway-R - Scen. 1,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/flyway.csv
+      #       done
+      #     done
+      #   env:
+      #     PGHOST: localhost
 
       # - name: Flyway migrate
       #   run: |
@@ -170,60 +294,60 @@ jobs:
       #         -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
       #     done
 
-      - name: Install Liquibase via APT
-        run: |
-          wget -O- https://repo.liquibase.com/liquibase.asc \
-            | gpg --dearmor > liquibase-keyring.gpg \
-            && sudo mv liquibase-keyring.gpg /usr/share/keyrings/ \
-            && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/liquibase-keyring.gpg] https://repo.liquibase.com stable main' \
-               | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
+      # - name: Install Liquibase via APT
+      #   run: |
+      #     wget -O- https://repo.liquibase.com/liquibase.asc \
+      #       | gpg --dearmor > liquibase-keyring.gpg \
+      #       && sudo mv liquibase-keyring.gpg /usr/share/keyrings/ \
+      #       && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/liquibase-keyring.gpg] https://repo.liquibase.com stable main' \
+      #          | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
 
-          sudo apt-get update
-          sudo apt-get install -y liquibase
+      #     sudo apt-get update
+      #     sudo apt-get install -y liquibase
 
-      - name: Run Liquibase migrations & rollbacks
-        run: |
-          mkdir -p metricsLiquibase
-          for iter in {1..10}
-          do
-            for ctx in 1 2 3 4 5 6 7 8 9 10 11 12 13; do
-              START=$(date +%s%N)
-              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
-                update $ctx
-              DURATION=$(( $(date +%s%N) - START ))
-              echo "Liquibase - Scen. 1,$ctx,$DURATION,0,0,${ctx}Lines" >> metrics/liquibase.csv
-            done
+      # - name: Run Liquibase migrations & rollbacks
+      #   run: |
+      #     mkdir -p metricsLiquibase
+      #     for iter in {1..10}
+      #     do
+      #       for ctx in 1 2 3 4 5 6 7 8 9 10 11 12 13; do
+      #         START=$(date +%s%N)
+      #         liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #           --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+      #           update $ctx
+      #         DURATION=$(( $(date +%s%N) - START ))
+      #         echo "Liquibase - Scen. 1,$ctx,$DURATION,0,0,${ctx}Lines" >> metrics/liquibase.csv
+      #       done
 
-            for ctx in 14 15 16 17 18 19 20 21 22 23; do
-              START=$(date +%s%N)
-              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
-                update $ctx
-              DURATION=$(( $(date +%s%N) - START ))
-              echo "Liquibase - Scen. 2,$ctx,$DURATION,0,0,${ctx}Lines" >> metrics/liquibase.csv
-            done
+      #       for ctx in 14 15 16 17 18 19 20 21 22 23; do
+      #         START=$(date +%s%N)
+      #         liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #           --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+      #           update $ctx
+      #         DURATION=$(( $(date +%s%N) - START ))
+      #         echo "Liquibase - Scen. 2,$ctx,$DURATION,0,0,${ctx}Lines" >> metrics/liquibase.csv
+      #       done
 
-            for ctx in 23 22 21 20 19 18 17 16 15 14; do
-              START_R=$(date +%s%N)
-              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
-                rollbackCount 1 $ctx
-              DURATION_R=$(( $(date +%s%N) - START_R ))
-              echo "Liquibase-R - Scen. 2,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/liquibase.csv
-            done
+      #       for ctx in 23 22 21 20 19 18 17 16 15 14; do
+      #         START_R=$(date +%s%N)
+      #         liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #           --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+      #           rollbackCount 1 $ctx
+      #         DURATION_R=$(( $(date +%s%N) - START_R ))
+      #         echo "Liquibase-R - Scen. 2,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/liquibase.csv
+      #       done
 
-            for ctx in 13 12 11 10 9 8 7 6 5 4 3 2 1; do
-              START_R=$(date +%s%N)
-              liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
-                rollbackCount 1 $ctx
-              DURATION_R=$(( $(date +%s%N) - START_R ))
-              echo "Liquibase-R - Scen. 1,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/liquibase.csv
-            done
-          done
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+      #       for ctx in 13 12 11 10 9 8 7 6 5 4 3 2 1; do
+      #         START_R=$(date +%s%N)
+      #         liquibase --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #           --changeLogFile=src/main/resources/db/changelog/db.changelog-master.xml \
+      #           rollbackCount 1 $ctx
+      #         DURATION_R=$(( $(date +%s%N) - START_R ))
+      #         echo "Liquibase-R - Scen. 1,$ctx,0,$DURATION_R,0,${ctx}Lines" >> metrics/liquibase.csv
+      #       done
+      #     done
+      #   env:
+      #     JAVA_HOME: ${{ env.JAVA_HOME }}
 
       # - name: Liquibase Update
       #   run: |
