@@ -161,6 +161,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y liquibase
 
+      - name: Run Python DB initializer
+        run: python sql/addData.py
+
       - name: Run Liquibase migrations & rollbacks
         shell: bash
         run: |
