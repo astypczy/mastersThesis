@@ -73,35 +73,42 @@ jobs:
           chmod +x $HOME/flyway-${FLYWAY_VERSION}/flyway
           echo "$HOME/flyway-${FLYWAY_VERSION}" >> $GITHUB_PATH
 
-      - name: Flyway migrate
-        run: |
-          flyway \
-            -url="$DB_URL" \
-            -user="$DB_USER" \
-            -password="$DB_PASS" \
-            -baselineOnMigrate=true \
-            -locations=filesystem:backend/src/main/resources/db/migration \
-            migrate
+      # - name: Flyway migrate
+      #   run: |
+      #     flyway \
+      #       -url="$DB_URL" \
+      #       -user="$DB_USER" \
+      #       -password="$DB_PASS" \
+      #       -baselineOnMigrate=true \
+      #       -locations=filesystem:backend/src/main/resources/db/migration \
+      #       migrate
 
-      - name: Manual Flyway rollback 
-        run: |
-          echo ">>> Running manual rollback for Group 1–6"
-          for script in \
-            U7__undo_create_big_table.sql \
-            U6__undo_init_person.sql \
-            U5__undo_create_person_name_sync_trigger.sql \
-            U4__undo_create_person_name_sync_function.sql \
-            U3__undo_copy_legacy_to_new.sql \
-            U2__undo_add_new_name.sql
-          do
-            psql -h localhost -U postgres -d mastersThesis -f backend/src/main/resources/db/migration/$script
-          done
-          echo "Cleaning flyway_schema_history manually..."
-          for ver in 7 6 5 4 3 2
-          do
-            psql -h localhost -U postgres -d mastersThesis \
-              -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
-          done
+      # - name: Manual Flyway rollback 
+      #   run: |
+      #     echo ">>> Running manual rollback for Group 1–13"
+      #     for script in \
+      #       U14__undo_create_big_table.sql \
+      #       U13__undo_change_type_error.sql \
+      #       U12__undo_create_audit_trigger.sql \
+      #       U11__undo_create_audit_table.sql \
+      #       U10__undo_add_indexes.sql \
+      #       U9__undo_create_name_sync_trigger.sql \
+      #       U8__undo_create_name_sync_function.sql \
+      #       U7__undo_split_name_columns.sql \
+      #       U6__undo_init_person.sql \
+      #       U5__undo_create_person_name_sync_trigger.sql \
+      #       U4__undo_create_person_name_sync_function.sql \
+      #       U3__undo_copy_legacy_to_new.sql \
+      #       U2__undo_add_new_name.sql
+      #     do
+      #       psql -h localhost -U postgres -d mastersThesis -f backend/src/main/resources/db/migration/$script
+      #     done
+      #     echo "Cleaning flyway_schema_history manually..."
+      #     for ver in 14 13 12 11 10 9 8 7 6 5 4 3 2
+      #     do
+      #       psql -h localhost -U postgres -d mastersThesis \
+      #         -c "DELETE FROM flyway_schema_history WHERE version = '$ver';"
+      #     done
 
       - name: Install Liquibase via APT
         run: |
@@ -132,7 +139,7 @@ jobs:
             --url=$DB_URL \
             --username=$DB_USER \
             --password=$DB_PASS \
-            rollback-count --count=6
+            rollback-count --count=23
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
 
