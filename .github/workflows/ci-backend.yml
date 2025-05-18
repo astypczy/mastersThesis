@@ -130,14 +130,14 @@ jobs:
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
               # usuń wpis z historii, jeżeli tabela istnieje
               psql -h localhost -U postgres -d mastersThesis <<EOF
-              DO $$
-              BEGIN
-                IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
-                  DELETE FROM flyway_schema_history WHERE version = '$ctx';
-                END IF;
-              END
-              $$;
-              EOF
+          DO $$
+          BEGIN
+            IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
+              DELETE FROM flyway_schema_history WHERE version = '$ctx';
+            END IF;
+          END
+          $$;
+          EOF
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
               echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
@@ -150,14 +150,14 @@ jobs:
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
               psql -h localhost -U postgres -d mastersThesis <<EOF
-              DO $$
-              BEGIN
-                IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
-                  DELETE FROM flyway_schema_history WHERE version = '$ctx';
-                END IF;
-              END
-              $$;
-              EOF
+          DO $$
+          BEGIN
+            IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
+              DELETE FROM flyway_schema_history WHERE version = '$ctx';
+            END IF;
+          END
+          $$;
+          EOF
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
               echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
