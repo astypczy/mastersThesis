@@ -1,10 +1,54 @@
-DO $$
-BEGIN
-FOR i IN 1..50 LOOP
-    EXECUTE format(
-      'UPDATE big_table SET col%s = NULL;',
-      i
-    );
-END LOOP;
-END;
-$$;
+UPDATE big_table SET col1  = NULL;
+UPDATE big_table SET col2  = NULL;
+UPDATE big_table SET col3  = NULL;
+UPDATE big_table SET col4  = NULL;
+UPDATE big_table SET col5  = NULL;
+UPDATE big_table SET col6  = NULL;
+UPDATE big_table SET col7  = NULL;
+UPDATE big_table SET col8  = NULL;
+UPDATE big_table SET col9  = NULL;
+UPDATE big_table SET col10 = NULL;
+
+UPDATE big_table SET col11 = NULL;
+UPDATE big_table SET col12 = NULL;
+UPDATE big_table SET col13 = NULL;
+UPDATE big_table SET col14 = NULL;
+UPDATE big_table SET col15 = NULL;
+UPDATE big_table SET col16 = NULL;
+UPDATE big_table SET col17 = NULL;
+UPDATE big_table SET col18 = NULL;
+UPDATE big_table SET col19 = NULL;
+UPDATE big_table SET col20 = NULL;
+
+UPDATE big_table SET col21 = NULL;
+UPDATE big_table SET col22 = NULL;
+UPDATE big_table SET col23 = NULL;
+UPDATE big_table SET col24 = NULL;
+UPDATE big_table SET col25 = NULL;
+UPDATE big_table SET col26 = NULL;
+UPDATE big_table SET col27 = NULL;
+UPDATE big_table SET col28 = NULL;
+UPDATE big_table SET col29 = NULL;
+UPDATE big_table SET col30 = NULL;
+
+UPDATE big_table SET col31 = NULL;
+UPDATE big_table SET col32 = NULL;
+UPDATE big_table SET col33 = NULL;
+UPDATE big_table SET col34 = NULL;
+UPDATE big_table SET col35 = NULL;
+UPDATE big_table SET col36 = NULL;
+UPDATE big_table SET col37 = NULL;
+UPDATE big_table SET col38 = NULL;
+UPDATE big_table SET col39 = NULL;
+UPDATE big_table SET col40 = NULL;
+
+UPDATE big_table SET col41 = NULL;
+UPDATE big_table SET col42 = NULL;
+UPDATE big_table SET col43 = NULL;
+UPDATE big_table SET col44 = NULL;
+UPDATE big_table SET col45 = NULL;
+UPDATE big_table SET col46 = NULL;
+UPDATE big_table SET col47 = NULL;
+UPDATE big_table SET col48 = NULL;
+UPDATE big_table SET col49 = NULL;
+UPDATE big_table SET col50 = NULL;

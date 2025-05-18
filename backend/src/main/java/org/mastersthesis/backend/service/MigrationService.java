@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.*;
@@ -23,6 +24,7 @@ import javax.sql.DataSource;
 
 import java.io.IOException;
 import java.lang.InterruptedException;
+import java.util.stream.Collectors;
 
 @Service
 public class MigrationService {
@@ -98,21 +100,28 @@ public class MigrationService {
 
     public TestResult runFlywayRollback(String context) {
         String undoScript = getFlywayScriptForContextRollback(context);
+        ClassPathResource resource = new ClassPathResource("db/migration/" + undoScript);
 
-        try (Connection conn = dataSource.getConnection()) {
-            System.out.println(">>> Flyway.rollback using ScriptUtils: " + undoScript);
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            System.out.println(">>> Flyway.rollback custom execute: " + undoScript);
 
             ResourceMonitor monitor = new ResourceMonitor();
             monitor.start();
 
+            String sql = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))
+                    .lines()
+                    .collect(Collectors.joining("\n"));
+
             long start = System.nanoTime();
-            ScriptUtils.executeSqlScript(conn, new ClassPathResource("db/migration/" + undoScript));
-            try (Statement stmt = conn.createStatement()) {
-                stmt.executeUpdate(
-                        "DELETE FROM flyway_schema_history WHERE version = '" +
-                                String.valueOf(Integer.parseInt(context)+1) + "'"
-                );
-            }
+            stmt.execute(sql);
+
+            String version = String.valueOf(Integer.parseInt(context) + 1);
+            stmt.executeUpdate(
+                    "DELETE FROM flyway_schema_history WHERE version = '" + version + "'"
+            );
             long rollbackTime = System.nanoTime() - start;
 
             monitor.stop();
@@ -128,6 +137,7 @@ public class MigrationService {
             return new TestResult("Flyway-Rollback", context, 0, 0, -1, 0, 0, 0);
         }
     }
+
 
     private int countFlywayLines(String scriptName) {
         boolean inBlockComment = false;
