@@ -92,8 +92,6 @@ jobs:
         shell: bash
         run: |
           for iter in {1..2}; do
-
-            # Scenariusz 1: migrate 2–14
             for ctx in {2..14}; do
               START=$(date +%s%N)
               $HOME/flyway-10.20.1/flyway \
@@ -109,8 +107,6 @@ jobs:
               echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
                 >> metricsFlyway/flyway.csv
             done
-
-            # Scenariusz 2: migrate 15–24
             for ctx in {15..24}; do
               START=$(date +%s%N)
               $HOME/flyway-10.20.1/flyway \
@@ -127,22 +123,12 @@ jobs:
                 >> metricsFlyway/flyway.csv
             done
 
-            # Scenariusz 2: rollback 24→15 ręcznie
             for ctx in {24..15}; do
               UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-
-              # Usuń wpis z historii, jeśli istnieje
-              psql -h localhost -U postgres -d mastersThesis <<-EOF
-          DO $$
-          BEGIN
-            IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
-              DELETE FROM flyway_schema_history WHERE version = '${ctx}';
-            END IF;
-          END
-          $$;
-          EOF
+              psql -h localhost -U postgres -d mastersThesis \
+                -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
               echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
@@ -154,17 +140,8 @@ jobs:
               UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-
-              # Usuń wpis z historii, jeśli istnieje
-              psql -h localhost -U postgres -d mastersThesis <<-EOF
-          DO $$
-          BEGIN
-            IF to_regclass('public.flyway_schema_history') IS NOT NULL THEN
-              DELETE FROM flyway_schema_history WHERE version = '${ctx}';
-            END IF;
-          END
-          $$;
-          EOF
+              psql -h localhost -U postgres -d mastersThesis \
+                -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
               echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
