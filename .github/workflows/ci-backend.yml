@@ -79,6 +79,15 @@ jobs:
           echo "tool,scenario,ctx,migrationTimeNs,rollbackTimeNs,exitCode,scriptLines,cpuUsage,memoryUsage,successRate" > metricsFlyway/flyway.csv
           echo "tool,scenario,ctx,migrationTimeNs,rollbackTimeNs,exitCode,scriptLines,cpuUsage,memoryUsage,successRate" > metricsLiquibase/liquibase.csv
 
+      - name: Bootstrap Flyway schema history
+        run: |
+          $HOME/flyway-10.20.1/flyway \
+            -url="$DB_URL" \
+            -user="$DB_USER" \
+            -password="$DB_PASS" \
+            -baselineOnMigrate=true \
+            info
+
       - name: Run Flyway migrations & rollbacks
         shell: bash
         run: |
