@@ -92,22 +92,7 @@ jobs:
         shell: bash
         run: |
           for iter in {1..100}; do
-            for ctx in {2..14}; do
-              START=$(date +%s%N)
-              $HOME/flyway-10.20.1/flyway \
-                -url="$DB_URL" \
-                -user="$DB_USER" \
-                -password="$DB_PASS" \
-                -baselineOnMigrate=true \
-                -locations=filesystem:backend/src/main/resources/db/migration \
-                migrate -target="${ctx}"
-              EXIT=$?
-              DURATION=$(( $(date +%s%N) - START ))
-              LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
-              echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
-                >> metricsFlyway/flyway.csv
-            done
-            # for ctx in {15..24}; do
+            # for ctx in {2..14}; do
             #   START=$(date +%s%N)
             #   $HOME/flyway-10.20.1/flyway \
             #     -url="$DB_URL" \
@@ -119,23 +104,27 @@ jobs:
             #   EXIT=$?
             #   DURATION=$(( $(date +%s%N) - START ))
             #   LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
-            #   echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
+            #   echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
             #     >> metricsFlyway/flyway.csv
             # done
 
-            # for ctx in {24..15}; do
-            #   UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
-            #   START=$(date +%s%N)
-            #   psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-            #   psql -h localhost -U postgres -d mastersThesis \
-            #     -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
-            #   DURATION=$(( $(date +%s%N) - START ))
-            #   LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
-            #   echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-            #     >> metricsFlyway/flyway.csv
-            # done
+            for ctx in {15..24}; do
+              START=$(date +%s%N)
+              $HOME/flyway-10.20.1/flyway \
+                -url="$DB_URL" \
+                -user="$DB_USER" \
+                -password="$DB_PASS" \
+                -baselineOnMigrate=true \
+                -locations=filesystem:backend/src/main/resources/db/migration \
+                migrate -target="${ctx}"
+              EXIT=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
+              echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
+                >> metricsFlyway/flyway.csv
+            done
 
-            for ctx in {14..2}; do
+            for ctx in {24..15}; do
               UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
               START=$(date +%s%N)
               psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
@@ -143,9 +132,21 @@ jobs:
                 -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
-              echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+              echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
                 >> metricsFlyway/flyway.csv
             done
+
+            # for ctx in {14..2}; do
+            #   UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+            #   START=$(date +%s%N)
+            #   psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+            #   psql -h localhost -U postgres -d mastersThesis \
+            #     -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
+            #   DURATION=$(( $(date +%s%N) - START ))
+            #   LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+            #   echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+            #     >> metricsFlyway/flyway.csv
+            # done
           done
         env:
           PGHOST: localhost
@@ -168,20 +169,7 @@ jobs:
         run: |
           set +e
           for iter in {1..100}; do
-            for ctx in {1..13}; do
-              START=$(date +%s%N)
-              liquibase \
-                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                update --contexts="${ctx}" \
-                || true
-              DURATION=$(( $(date +%s%N) - START ))
-              LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-              echo "Liquibase,Scen1,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
-                >> metricsLiquibase/liquibase.csv
-            done
-
-            # for ctx in {14..23}; do
+            # for ctx in {1..13}; do
             #   START=$(date +%s%N)
             #   liquibase \
             #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
@@ -190,24 +178,24 @@ jobs:
             #     || true
             #   DURATION=$(( $(date +%s%N) - START ))
             #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-            #   echo "Liquibase,Scen2,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
+            #   echo "Liquibase,Scen1,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
             #     >> metricsLiquibase/liquibase.csv
             # done
 
-            # for ctx in {23..14}; do
-            #   START=$(date +%s%N)
-            #   liquibase \
-            #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-            #     rollbackCount 1 --contexts="${ctx}" \
-            #     || true
-            #   DURATION=$(( $(date +%s%N) - START ))
-            #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-            #   echo "Liquibase-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-            #     >> metricsLiquibase/liquibase.csv
-            # done
+            for ctx in {14..23}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                update --contexts="${ctx}" \
+                || true
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              echo "Liquibase,Scen2,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
+                >> metricsLiquibase/liquibase.csv
+            done
 
-            for ctx in {13..1}; do
+            for ctx in {23..14}; do
               START=$(date +%s%N)
               liquibase \
                 --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
@@ -216,9 +204,22 @@ jobs:
                 || true
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-              echo "Liquibase-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+              echo "Liquibase-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
                 >> metricsLiquibase/liquibase.csv
             done
+
+            # for ctx in {13..1}; do
+            #   START=$(date +%s%N)
+            #   liquibase \
+            #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+            #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+            #     rollbackCount 1 --contexts="${ctx}" \
+            #     || true
+            #   DURATION=$(( $(date +%s%N) - START ))
+            #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+            #   echo "Liquibase-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+            #     >> metricsLiquibase/liquibase.csv
+            # done
           done
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
