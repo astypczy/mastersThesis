@@ -150,88 +150,85 @@ jobs:
           done
         env:
           PGHOST: localhost
-
-      - name: Install Liquibase via APT
-        run: |
-          wget -O- https://repo.liquibase.com/liquibase.asc \
-            | gpg --dearmor > liquibase-keyring.gpg \
-            && sudo mv liquibase-keyring.gpg /usr/share/keyrings/ \
-            && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/liquibase-keyring.gpg] https://repo.liquibase.com stable main' \
-               | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y liquibase
       
-      - name: Run Python DB initializer
-        run: python sql/addData.py
-
-      - name: Run Liquibase migrations & rollbacks
-        shell: bash
-        run: |
-          set +e
-          for iter in {1..100}; do
-            # for ctx in {1..13}; do
-            #   START=$(date +%s%N)
-            #   liquibase \
-            #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-            #     update --contexts="${ctx}" \
-            #     || true
-            #   DURATION=$(( $(date +%s%N) - START ))
-            #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-            #   echo "Liquibase,Scen1,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
-            #     >> metricsLiquibase/liquibase.csv
-            # done
-
-            for ctx in {14..23}; do
-              START=$(date +%s%N)
-              liquibase \
-                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                update --contexts="${ctx}" \
-                || true
-              DURATION=$(( $(date +%s%N) - START ))
-              LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-              echo "Liquibase,Scen2,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
-                >> metricsLiquibase/liquibase.csv
-            done
-
-            for ctx in {23..14}; do
-              START=$(date +%s%N)
-              liquibase \
-                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                rollbackCount 1 --contexts="${ctx}" \
-                || true
-              DURATION=$(( $(date +%s%N) - START ))
-              LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-              echo "Liquibase-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-                >> metricsLiquibase/liquibase.csv
-            done
-
-            # for ctx in {13..1}; do
-            #   START=$(date +%s%N)
-            #   liquibase \
-            #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-            #     rollbackCount 1 --contexts="${ctx}" \
-            #     || true
-            #   DURATION=$(( $(date +%s%N) - START ))
-            #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-            #   echo "Liquibase-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-            #     >> metricsLiquibase/liquibase.csv
-            # done
-          done
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-
       - name: Upload Flyway metrics
         uses: actions/upload-artifact@v4
         with:
           name: flyway-metrics
           path: metricsFlyway/flyway.csv
+      # - name: Install Liquibase via APT
+      #   run: |
+      #     wget -O- https://repo.liquibase.com/liquibase.asc \
+      #       | gpg --dearmor > liquibase-keyring.gpg \
+      #       && sudo mv liquibase-keyring.gpg /usr/share/keyrings/ \
+      #       && echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/liquibase-keyring.gpg] https://repo.liquibase.com stable main' \
+      #          | sudo tee /etc/apt/sources.list.d/liquibase.list > /dev/null
+      #     sudo apt-get update
+      #     sudo apt-get install -y liquibase
+      # - name: Run Python DB initializer
+      #   run: python sql/addData.py
 
-      - name: Upload Liquibase metrics
-        uses: actions/upload-artifact@v4
-        with:
-          name: liquibase-metrics
-          path: metricsLiquibase/liquibase.csv
+      # - name: Run Liquibase migrations & rollbacks
+      #   shell: bash
+      #   run: |
+      #     set +e
+      #     for iter in {1..100}; do
+      #       # for ctx in {1..13}; do
+      #       #   START=$(date +%s%N)
+      #       #   liquibase \
+      #       #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+      #       #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #       #     update --contexts="${ctx}" \
+      #       #     || true
+      #       #   DURATION=$(( $(date +%s%N) - START ))
+      #       #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+      #       #   echo "Liquibase,Scen1,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
+      #       #     >> metricsLiquibase/liquibase.csv
+      #       # done
+
+      #       for ctx in {14..23}; do
+      #         START=$(date +%s%N)
+      #         liquibase \
+      #           --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+      #           --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #           update --contexts="${ctx}" \
+      #           || true
+      #         DURATION=$(( $(date +%s%N) - START ))
+      #         LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+      #         echo "Liquibase,Scen2,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
+      #           >> metricsLiquibase/liquibase.csv
+      #       done
+
+      #       for ctx in {23..14}; do
+      #         START=$(date +%s%N)
+      #         liquibase \
+      #           --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+      #           --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #           rollbackCount 1 --contexts="${ctx}" \
+      #           || true
+      #         DURATION=$(( $(date +%s%N) - START ))
+      #         LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+      #         echo "Liquibase-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+      #           >> metricsLiquibase/liquibase.csv
+      #       done
+
+      #       # for ctx in {13..1}; do
+      #       #   START=$(date +%s%N)
+      #       #   liquibase \
+      #       #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+      #       #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+      #       #     rollbackCount 1 --contexts="${ctx}" \
+      #       #     || true
+      #       #   DURATION=$(( $(date +%s%N) - START ))
+      #       #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+      #       #   echo "Liquibase-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+      #       #     >> metricsLiquibase/liquibase.csv
+      #       # done
+      #     done
+      #   env:
+      #     JAVA_HOME: ${{ env.JAVA_HOME }}
+      # - name: Upload Liquibase metrics
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: liquibase-metrics
+      #     path: metricsLiquibase/liquibase.csv
