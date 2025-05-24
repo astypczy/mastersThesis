@@ -1,0 +1,2 @@
+ALTER TABLE person
+DROP COLUMN IF EXISTS new_name;

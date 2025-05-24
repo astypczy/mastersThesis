@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="1-add-new-name" author="dev" context="1" runAlways="true">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="person" columnName="new_name"/></not>
+        </preConditions>
+        <addColumn tableName="person">
+            <column name="new_name" type="text"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="person" columnName="new_name"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="2-copy-data" author="dev" context="2" runAlways="true">
+        <sql>UPDATE person SET new_name = legacy_name;</sql>
+        <rollback>
+            <sql>UPDATE person SET new_name = null;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="3-create-function" author="dev" context="3" runAlways="true">
+        <sql splitStatements="false" endDelimiter="$$">
+        <![CDATA[
+                CREATE OR REPLACE FUNCTION person_name_sync() RETURNS trigger AS $$
+                BEGIN
+          IF TG_OP = 'INSERT' THEN
+            IF NEW.new_name IS NULL THEN
+              NEW.new_name := NEW.legacy_name;
+            ELSIF NEW.legacy_name IS NULL THEN
+              NEW.legacy_name := NEW.new_name;
+                END IF;
+                RETURN NEW;
+                END IF;
+
+          IF NEW.legacy_name IS DISTINCT FROM OLD.legacy_name THEN
+            NEW.new_name := NEW.legacy_name;
+          ELSIF NEW.new_name IS DISTINCT FROM OLD.new_name THEN
+            NEW.legacy_name := NEW.new_name;
+                END IF;
+                RETURN NEW;
+                END;
+        $$ LANGUAGE plpgsql;
+                ]]>
+      </sql>
+        <rollback>
+            <sql>DROP FUNCTION IF EXISTS person_name_sync()</sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet id="4-create-trigger" author="dev" context="4" runAlways="true">
+        <sql>
+            DROP TRIGGER IF EXISTS person_name_sync_trigger ON person;
+            CREATE TRIGGER person_name_sync_trigger
+                BEFORE INSERT OR UPDATE ON person
+                                     FOR EACH ROW EXECUTE FUNCTION person_name_sync();
+        </sql>
+        <rollback><sql>DROP TRIGGER IF EXISTS person_name_sync_trigger ON person;</sql></rollback>
+    </changeSet>
+
+    <changeSet id="5-drop-legacy" author="dev" context="5" runAlways="true">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="person" columnName="legacy_name"/>
+        </preConditions>
+        <dropColumn tableName="person" columnName="legacy_name"/>
+        <rollback>
+            <addColumn tableName="person"><column name="legacy_name" type="varchar(100)"/></addColumn>
+            <sql>UPDATE person SET legacy_name = name;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="6-disable-legacy-trigger" author="dev" context="6">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="person"/>
+                <or>
+                    <sequenceExists sequenceName="person_name_sync_trigger"/>
+                    <not><sqlCheck expectedResult="0">
+                        SELECT COUNT(*) FROM pg_proc WHERE proname = 'person_name_sync'
+                    </sqlCheck></not>
+                </or>
+            </and>
+        </preConditions>
+        <sql>DROP TRIGGER IF EXISTS person_name_sync_trigger ON person;</sql>
+        <sql>DROP FUNCTION IF EXISTS person_name_sync();</sql>
+        <rollback>
+            <!-- 1) Przywracamy funkcję -->
+            <sql splitStatements="false" endDelimiter="$$"><![CDATA[
+            CREATE OR REPLACE FUNCTION person_name_sync() RETURNS trigger AS $$
+            BEGIN
+                IF TG_OP = 'INSERT' THEN
+                    IF NEW.new_name IS NULL THEN
+                        NEW.new_name := NEW.legacy_name;
+                    ELSIF NEW.legacy_name IS NULL THEN
+                        NEW.legacy_name := NEW.new_name;
+                    END IF;
+                    RETURN NEW;
+                END IF;
+
+                IF NEW.legacy_name IS DISTINCT FROM OLD.legacy_name THEN
+                    NEW.new_name := NEW.legacy_name;
+                ELSIF NEW.new_name IS DISTINCT FROM OLD.new_name THEN
+                    NEW.legacy_name := NEW.new_name;
+                END IF;
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        ]]></sql>
+
+            <!-- 2) Przywracamy trigger -->
+            <sql>
+                DROP TRIGGER IF EXISTS person_name_sync_trigger ON person;
+                CREATE TRIGGER person_name_sync_trigger
+                BEFORE INSERT OR UPDATE ON person
+                FOR EACH ROW
+                EXECUTE FUNCTION person_name_sync();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="7-split-name-columns" author="dev" context="7" runAlways="true">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <not><columnExists tableName="person" columnName="first_name"/></not>
+                <not><columnExists tableName="person" columnName="last_name"/></not>
+            </and>
+        </preConditions>
+        <addColumn tableName="person">
+            <column name="first_name" type="varchar(100)"/>
+            <column name="last_name"  type="varchar(100)"/>
+        </addColumn>
+        <sql>UPDATE person
+             SET first_name = split_part(new_name, ' ', 1),
+                 last_name  = split_part(new_name, ' ', 2);</sql>
+        <rollback>
+            <sql>UPDATE person
+                SET new_name = first_name || ' ' || last_name;</sql>
+            <dropColumn tableName="person" columnName="first_name"/>
+            <dropColumn tableName="person" columnName="last_name"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="8-create-name-sync-function" author="dev" context="8" runAlways="true">
+        <sql splitStatements="false" endDelimiter="$$"><![CDATA[
+            CREATE OR REPLACE FUNCTION person_name_sync_v2() RETURNS trigger AS $$
+            BEGIN
+            -- Na INSERT pobieramy całe new_name i rozdzielamy
+            IF TG_OP = 'INSERT' THEN
+                IF NEW.new_name IS NOT NULL THEN
+                    NEW.first_name := split_part(NEW.new_name, ' ', 1);
+                    -- jeśli nie ma drugiej części, split_part zwróci ''
+                    NEW.last_name  := NULLIF(split_part(NEW.new_name, ' ', 2), '');
+            END IF;
+            RETURN NEW;
+            END IF;
+
+            -- Na UPDATE: jeśli zmieniło się new_name, ponownie rozbijamy
+            IF TG_OP = 'UPDATE' AND NEW.new_name IS DISTINCT FROM OLD.new_name THEN
+                NEW.first_name := split_part(NEW.new_name, ' ', 1);
+                NEW.last_name  := NULLIF(split_part(NEW.new_name, ' ', 2), '');
+            END IF;
+
+            RETURN NEW;
+            END;
+        $$ LANGUAGE plpgsql;
+            ]]></sql>
+        <rollback>
+            <sql>DROP FUNCTION IF EXISTS person_name_sync_v2();</sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet id="9-create-name-sync-trigger" author="dev" context="9" runAlways="true">
+        <sql>
+            DROP TRIGGER IF EXISTS person_name_sync_v2_trigger ON person;
+            CREATE TRIGGER person_name_sync_v2_trigger
+                BEFORE INSERT OR UPDATE ON person
+                                     FOR EACH ROW EXECUTE FUNCTION person_name_sync_v2();
+        </sql>
+        <rollback>
+            <sql>DROP TRIGGER IF EXISTS person_name_sync_v2_trigger ON person;</sql>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet id="10-add-indexes" author="dev" context="10" runAlways="true">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="person" indexName="idx_person_last_name"/></not>
+        </preConditions>
+        <createIndex tableName="person" indexName="idx_person_last_name">
+            <column name="last_name"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="person" indexName="idx_person_last_name"/>
+        </rollback>
+    </changeSet>
+<!--    EXPLAIN ANALYZE SELECT * FROM person WHERE last_name = 'Kowalski';-->
+    <changeSet id="11-create-audit-table" author="dev" context="11" runAlways="true">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="person_audit"/></not>
+        </preConditions>
+        <createTable tableName="person_audit">
+            <column name="audit_id"   type="bigserial"   autoIncrement="true">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="person_id"  type="bigint"/>
+            <column name="first_name" type="varchar(100)"/>
+            <column name="last_name"  type="varchar(100)"/>
+            <column name="changed_at" type="timestamp" defaultValueComputed="now()"/>
+            <column name="operation"  type="varchar(10)"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="person_audit"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="12-audit-trigger" author="dev" context="12" runAlways="true">
+        <sql splitStatements="false" endDelimiter="$$"><![CDATA[
+            CREATE OR REPLACE FUNCTION person_audit_trig_fn() RETURNS trigger AS $$
+            BEGIN
+      IF TG_OP = 'INSERT' THEN
+        INSERT INTO person_audit(person_id, first_name, last_name, operation)
+        VALUES(NEW.id, NEW.first_name, NEW.last_name, 'INSERT');
+            RETURN NEW;
+            ELSIF TG_OP = 'UPDATE' THEN
+        INSERT INTO person_audit(person_id, first_name, last_name, operation)
+        VALUES(OLD.id, OLD.first_name, OLD.last_name, 'UPDATE');
+            RETURN NEW;
+            ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO person_audit(person_id, first_name, last_name, operation)
+        VALUES(OLD.id, OLD.first_name, OLD.last_name, 'DELETE');
+            RETURN OLD;
+            END IF;
+            END;
+    $$ LANGUAGE plpgsql;
+            ]]></sql>
+        <sql>
+            DROP TRIGGER IF EXISTS person_audit_trig ON person;
+            CREATE TRIGGER person_audit_trig
+                AFTER INSERT OR UPDATE OR DELETE ON person
+                FOR EACH ROW EXECUTE FUNCTION person_audit_trig_fn();
+        </sql>
+        <rollback>
+            <sql>
+                DROP TRIGGER IF EXISTS person_audit_trig ON person;
+                DROP FUNCTION IF EXISTS person_audit_trig_fn();
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="13-change-type-error" author="dev" context="13" runAlways="true">
+        <preConditions onFail="HALT">
+            <!-- wymuszamy błąd, jeśli są wartości dłuższe niż 50 znaków -->
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM person WHERE length(first_name) > 50;
+            </sqlCheck>
+        </preConditions>
+        <modifyDataType tableName="person" columnName="first_name" newDataType="varchar(50)"/>
+        <rollback>
+            <modifyDataType tableName="person" columnName="first_name" newDataType="varchar(100)"/>
+        </rollback>
+    </changeSet>
+
+
+    <changeSet id="14-create-big-table" author="dev" context="14" runAlways="true">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="big_table"/></not>
+        </preConditions>
+        <createTable tableName="big_table">
+            <column name="id" type="SERIAL">
+                <constraints primaryKey="true"/>
+            </column>
+        </createTable>
+        <sql splitStatements="false" endDelimiter="$$;">
+            <![CDATA[
+            DO $$
+            BEGIN
+            FOR i IN 1..50 LOOP
+    EXECUTE format(
+      'ALTER TABLE big_table ADD COLUMN IF NOT EXISTS col%s VARCHAR(50)',
+      i
+    );
+            END LOOP;
+            END;
+$$;
+            ]]>
+        </sql>
+        <rollback>
+            <dropTable tableName="big_table"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="15-insert-batch-1" author="dev" context="15" runAlways="true">
+        <sql>
+            INSERT INTO big_table (col1)
+            SELECT md5(random()::text) FROM generate_series(1,20000);
+        </sql>
+        <rollback>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 1 AND 20000;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="16-insert-batch-2" author="dev" context="16" runAlways="true">
+        <sql>
+            INSERT INTO big_table (col1)
+            SELECT md5(random()::text) FROM generate_series(1,20000);
+        </sql>
+        <rollback>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 20001 AND 40000;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="17-update-extra-cols" author="dev" context="17" runAlways="true">
+        <sql splitStatements="false" endDelimiter="$$;">
+            <![CDATA[
+            DO $$
+            BEGIN
+            FOR i IN 1..50 LOOP
+    EXECUTE format(
+      'UPDATE big_table SET col%s = ''UPDATED_'' || id WHERE col%s IS NULL',
+      i, i
+    );
+            END LOOP;
+            END;
+$$;
+            ]]>
+        </sql>
+        <rollback>
+            <sql splitStatements="false" endDelimiter="$$;">
+                <![CDATA[
+DO $$
+BEGIN
+  FOR i IN 1..50 LOOP
+    EXECUTE format('UPDATE big_table SET col%s = NULL', i);
+  END LOOP;
+END;
+$$;
+                ]]>
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="18-insert-batch-3" author="dev" context="18" runAlways="true">
+        <sql>
+            INSERT INTO big_table (col1, col2, col3)
+            SELECT md5(random()::text), md5(random()::text), md5(random()::text)
+            FROM generate_series(1,20000);
+        </sql>
+        <rollback>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 40001 AND 60000;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="19-delete-batch-1" author="dev" context="19" runAlways="true">
+        <sql>
+            DELETE FROM big_table WHERE id % 5 = 0;
+        </sql>
+        <rollback>
+            <!-- Brak rollback: symulacja trwałego usunięcia -->
+        </rollback>
+    </changeSet>
+
+    <changeSet id="20-insert-batch-4" author="dev" context="20" runAlways="true">
+        <sql>
+            INSERT INTO big_table (col1)
+            SELECT md5(random()::text) FROM generate_series(1,20000);
+        </sql>
+        <rollback>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 60001 AND 80000;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="21-delete-batch-2" author="dev" context="21" runAlways="true">
+        <sql>
+            DELETE FROM big_table WHERE id % 7 = 0;
+        </sql>
+        <rollback>
+            <!-- Brak rollback -->
+        </rollback>
+    </changeSet>
+
+    <changeSet id="22-insert-batch-5" author="dev" context="22" runAlways="true">
+        <sql>
+            INSERT INTO big_table (col1)
+            SELECT md5(random()::text) FROM generate_series(1,20000);
+        </sql>
+        <rollback>
+            <sql>DELETE FROM big_table WHERE id BETWEEN 80001 AND 100000;</sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="23-analyze" author="dev" context="23" runAlways="true">
+        <sql>ANALYZE big_table;</sql>
+        <rollback>
+            <!-- ANALYZE nie wymaga rollbacku -->
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,5 @@
+tool,count,avg_migration_ns,avg_rollback_ns,avg_cpu_pct,avg_mem_bytes,success_pct
+Flyway-forward,10,8108052069.8,nan,0.941733176825374,79783226.81600001,nan
+Flyway-rollback,10,23746381444.0,nan,0.9269371136763505,79524009.56,nan
+Liquibase-forward,10,12147256853.397,nan,1.049655089019629,80955276.155,nan
+Liquibase-rollback,10,12581210605.403,nan,1.1032264999169696,80774492.988,nan
