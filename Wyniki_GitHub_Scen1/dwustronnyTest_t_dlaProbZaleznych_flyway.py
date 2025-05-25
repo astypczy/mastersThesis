@@ -56,7 +56,7 @@ paired['diff'] = paired['migrationTimeNs'] - paired['rollbackTimeNs']
 
 # 1) Test Shapiro-Wilka na normalność różnic
 W, p_normal = shapiro(paired['diff'])
-print(f"Shapiro-Wilk: W = {W:.4f}, p = {p_normal:.4f}")
+print(f"Shapiro-Wilk: W = {W:.4f}, p = {p_normal}")
 
 # 2) Wykrywanie outlierów metodą IQR
 Q1 = paired['diff'].quantile(0.25)
@@ -85,4 +85,4 @@ plt.show()
 
 # Jeśli rozkład nie jest normalny, możesz użyć testu Wilcoxona:
 stat, p_wilc = wilcoxon(paired['diff'])
-print(f"Test Wilcoxona: stat = {stat:.4f}, p = {p_wilc:.4f}")
+print(f"Test Wilcoxona: stat = {stat:.4f}, p = {p_wilc}")
