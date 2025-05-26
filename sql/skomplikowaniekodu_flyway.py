@@ -1,6 +1,7 @@
 import re
 import os
 from collections import namedtuple, defaultdict
+import csv
 
 # Definicja metryk
 Metrics = namedtuple('Metrics', [
@@ -78,6 +79,15 @@ for fname in os.listdir(scripts_dir):
     )
 
     results[ctx][kind] = metrics
+
+with open('flyway_metrics.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['context', 'typ_skryptu', 'LOC', 'Statements', 'MaxDepth', 'Cyclomatic', 'CommentRatio'])
+    for ctx in sorted(results):
+        for kind, m in results[ctx].items():
+            writer.writerow([ctx, kind, m.loc, m.stmt_count, m.max_depth, m.cyclomatic, f"{m.comment_ratio:.2f}"])
+
+print("Wyniki zapisane do 'flyway_metrics.csv'.")
 
 # Wyświetl wyniki
 for ctx in sorted(results):

@@ -1,6 +1,7 @@
 import re
 import xml.etree.ElementTree as ET
 from collections import namedtuple
+import csv
 
 # Definicja metryk
 Metrics = namedtuple('Metrics', [
@@ -74,6 +75,14 @@ for cs in root.findall('lb:changeSet', ns):
         comment_ratio= comment_ratio(code),
     )
     results.append((cs_id, ctx, m))
+
+with open('liquibase_metrics.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['changeSet', 'context', 'LOC', 'Statements', 'MaxDepth', 'Cyclomatic', 'CommentRatio'])
+    for cs_id, ctx, m in results:
+        writer.writerow([cs_id, ctx, m.loc, m.stmt_count, m.max_depth, m.cyclomatic, f"{m.comment_ratio:.2f}"])
+
+print("Wyniki zapisane do 'liquibase_metrics.csv'.")
 
 # Wyświetl podsumowanie
 for cs_id, ctx, m in results:

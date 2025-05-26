@@ -1,3 +1,0 @@
-tool,identifier,context,migration_ns,rollback_ns,exit_code,script_lines,cpu_pct,mem_bytes,success_pct
-Flyway,run1,,0,9333600,0,0,1.0275570063067305,50920844,
-Flyway,run2,,0,2920300,0,0,0.0,0,
