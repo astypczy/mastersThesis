@@ -1,5 +1,5 @@
 # .github/workflows/ci-backend.yml
-name: CI · Backend (Ubuntu + Postgres service)
+name: CI Backend (Ubuntu + Postgres service)
 
 on:
   push:
@@ -68,94 +68,116 @@ jobs:
           echo "tool,scenario,ctx,migrationTimeNs,rollbackTimeNs,exitCode,scriptLines,cpuUsage,memoryUsage,successRate" > metricsFlyway/flyway.csv
           echo "tool,scenario,ctx,migrationTimeNs,rollbackTimeNs,exitCode,scriptLines,cpuUsage,memoryUsage,successRate" > metricsLiquibase/liquibase.csv
 
-      # - name: Run Python DB initializer
-      #   run: python sql/addData.py
+      - name: Run Python DB initializer
+        run: python sql/addData.py
 
-      # - name: Download & unpack Flyway CLI
-      #   run: |
-      #     FLYWAY_VERSION=10.20.1
-      #     curl -L "https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
-      #       | tar xz -C $HOME
-      #     chmod +x $HOME/flyway-${FLYWAY_VERSION}/flyway
-      #     echo "$HOME/flyway-${FLYWAY_VERSION}" >> $GITHUB_PATH
+      - name: Download & unpack Flyway CLI
+        run: |
+          FLYWAY_VERSION=10.20.1
+          curl -L "https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
+            | tar xz -C $HOME
+          chmod +x $HOME/flyway-${FLYWAY_VERSION}/flyway
+          echo "$HOME/flyway-${FLYWAY_VERSION}" >> $GITHUB_PATH
 
-      # - name: Bootstrap Flyway schema history
-      #   run: |
-      #     $HOME/flyway-10.20.1/flyway \
-      #       -url="$DB_URL" \
-      #       -user="$DB_USER" \
-      #       -password="$DB_PASS" \
-      #       -baselineOnMigrate=true \
-      #       info
+      - name: Bootstrap Flyway schema history
+        run: |
+          $HOME/flyway-10.20.1/flyway \
+            -url="$DB_URL" \
+            -user="$DB_USER" \
+            -password="$DB_PASS" \
+            -baselineOnMigrate=true \
+            info
 
-      # - name: Run Flyway migrations & rollbacks
-      #   shell: bash
-      #   run: |
-      #     for iter in {1..100}; do
-      #       # for ctx in {2..14}; do
-      #       #   START=$(date +%s%N)
-      #       #   $HOME/flyway-10.20.1/flyway \
-      #       #     -url="$DB_URL" \
-      #       #     -user="$DB_USER" \
-      #       #     -password="$DB_PASS" \
-      #       #     -baselineOnMigrate=true \
-      #       #     -locations=filesystem:backend/src/main/resources/db/migration \
-      #       #     migrate -target="${ctx}"
-      #       #   EXIT=$?
-      #       #   DURATION=$(( $(date +%s%N) - START ))
-      #       #   LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
-      #       #   echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
-      #       #     >> metricsFlyway/flyway.csv
-      #       # done
+      - name: Run Flyway migrations & rollbacks
+        shell: bash
+        run: |
+          for iter in {1..3}; do
+            for ctx in {2..14}; do
+              START=$(date +%s%N)
+              $HOME/flyway-10.20.1/flyway \
+                -url="$DB_URL" \
+                -user="$DB_USER" \
+                -password="$DB_PASS" \
+                -baselineOnMigrate=true \
+                -locations=filesystem:backend/src/main/resources/db/migration \
+                migrate -target="${ctx}"
+              EXIT=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Flyway,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
+                >> metricsFlyway/flyway.csv
+            done
 
-      #       for ctx in {15..24}; do
-      #         START=$(date +%s%N)
-      #         $HOME/flyway-10.20.1/flyway \
-      #           -url="$DB_URL" \
-      #           -user="$DB_USER" \
-      #           -password="$DB_PASS" \
-      #           -baselineOnMigrate=true \
-      #           -locations=filesystem:backend/src/main/resources/db/migration \
-      #           migrate -target="${ctx}"
-      #         EXIT=$?
-      #         DURATION=$(( $(date +%s%N) - START ))
-      #         LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
-      #         echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,100.0" \
-      #           >> metricsFlyway/flyway.csv
-      #       done
+            for ctx in {15..24}; do
+              START=$(date +%s%N)
+              $HOME/flyway-10.20.1/flyway \
+                -url="$DB_URL" \
+                -user="$DB_USER" \
+                -password="$DB_PASS" \
+                -baselineOnMigrate=true \
+                -locations=filesystem:backend/src/main/resources/db/migration \
+                migrate -target="${ctx}"
+              EXIT=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l backend/src/main/resources/db/migration/V${ctx}__*.sql | awk '{print $1}')
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Flyway,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
+                >> metricsFlyway/flyway.csv
+            done
 
-      #       for ctx in {24..15}; do
-      #         UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
-      #         START=$(date +%s%N)
-      #         psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-      #         psql -h localhost -U postgres -d mastersThesis \
-      #           -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
-      #         DURATION=$(( $(date +%s%N) - START ))
-      #         LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
-      #         echo "Flyway-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-      #           >> metricsFlyway/flyway.csv
-      #       done
+            for ctx in {24..15}; do
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+              START=$(date +%s%N)
+              psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+              EXIT=$?
+              psql -h localhost -U postgres -d mastersThesis \
+                -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Flyway-R,Scen2,${ctx},0,${DURATION},${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
+                >> metricsFlyway/flyway.csv
+            done
 
-      #       # for ctx in {14..2}; do
-      #       #   UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
-      #       #   START=$(date +%s%N)
-      #       #   psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
-      #       #   psql -h localhost -U postgres -d mastersThesis \
-      #       #     -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
-      #       #   DURATION=$(( $(date +%s%N) - START ))
-      #       #   LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
-      #       #   echo "Flyway-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-      #       #     >> metricsFlyway/flyway.csv
-      #       # done
-      #     done
-      #   env:
-      #     PGHOST: localhost
+            for ctx in {14..2}; do
+              UNDO_SQL="backend/src/main/resources/db/migration/U${ctx}__*.sql"
+              START=$(date +%s%N)
+              psql -h localhost -U postgres -d mastersThesis -f $UNDO_SQL
+              EXIT=$?
+              psql -h localhost -U postgres -d mastersThesis \
+                -c "DELETE FROM flyway_schema_history WHERE version = '${ctx}';"
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(wc -l $UNDO_SQL | awk '{print $1}')
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Flyway-R,Scen1,${ctx},0,${DURATION},${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
+                >> metricsFlyway/flyway.csv
+            done
+          done
+        env:
+          PGHOST: localhost
       
-      # - name: Upload Flyway metrics
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: flyway-metrics
-      #     path: metricsFlyway/flyway.csv
+      - name: Upload Flyway metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: flyway-metrics
+          path: metricsFlyway/flyway.csv
 
       - name: Install Liquibase via APT
         run: |
@@ -174,30 +196,40 @@ jobs:
         shell: bash
         run: |
           set +e
-          for iter in {1..100}; do
-            # for ctx in {1..13}; do
-            #   START=$(date +%s%N)
-            #   liquibase \
-            #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-            #     update --contexts="${ctx}" \
-            #     || true
-            #   DURATION=$(( $(date +%s%N) - START ))
-            #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-            #   echo "Liquibase,Scen1,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
-            #     >> metricsLiquibase/liquibase.csv
-            # done
+          for iter in {1..3}; do
+            for ctx in {1..13}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                update --contexts="${ctx}"
+              EXIT=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Liquibase,Scen1,${ctx},${DURATION},0,${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
+                >> metricsLiquibase/liquibase.csv
+            done
 
             for ctx in {14..23}; do
               START=$(date +%s%N)
               liquibase \
                 --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
                 --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                update --contexts="${ctx}" \
-                || true
+                update --contexts="${ctx}"
+              EXIT=$?
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-              echo "Liquibase,Scen2,${ctx},${DURATION},0,0,${LINES},0,0,100.0" \
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Liquibase,Scen2,${ctx},${DURATION},0,${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
                 >> metricsLiquibase/liquibase.csv
             done
 
@@ -206,29 +238,40 @@ jobs:
               liquibase \
                 --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
                 --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-                rollbackCount 1 --contexts="${ctx}" \
-                || true
+                rollbackCount 1 --contexts="${ctx}"
+              EXIT=$?
               DURATION=$(( $(date +%s%N) - START ))
               LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-              echo "Liquibase-R,Scen2,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Liquibase-R,Scen2,${ctx},0,${DURATION},${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
                 >> metricsLiquibase/liquibase.csv
             done
 
-            # for ctx in {13..1}; do
-            #   START=$(date +%s%N)
-            #   liquibase \
-            #     --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
-            #     --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
-            #     rollbackCount 1 --contexts="${ctx}" \
-            #     || true
-            #   DURATION=$(( $(date +%s%N) - START ))
-            #   LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
-            #   echo "Liquibase-R,Scen1,${ctx},0,${DURATION},0,${LINES},0,0,100.0" \
-            #     >> metricsLiquibase/liquibase.csv
-            # done
+            for ctx in {13..1}; do
+              START=$(date +%s%N)
+              liquibase \
+                --changeLogFile=backend/src/main/resources/db/changelog/db.changelog-master.xml \
+                --url="$DB_URL" --username="$DB_USER" --password="$DB_PASS" \
+                rollbackCount 1 --contexts="${ctx}"
+              EXIT=$?
+              DURATION=$(( $(date +%s%N) - START ))
+              LINES=$(grep -c "changeSet id=\"${ctx}\"" backend/src/main/resources/db/changelog/db.changelog-master.xml)
+              if [ $EXIT -eq 0 ]; then
+                SUCCESS_RATE=100.0
+              else
+                SUCCESS_RATE=0.0
+              fi
+              echo "Liquibase-R,Scen1,${ctx},0,${DURATION},${EXIT},${LINES},0,0,${SUCCESS_RATE}" \
+                >> metricsLiquibase/liquibase.csv
+            done
           done
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
+
       - name: Upload Liquibase metrics
         uses: actions/upload-artifact@v4
         with:

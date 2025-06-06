@@ -1,5 +1,5 @@
 # .github/workflows/ci-frontend.yml
-name: CI · Frontend (Ubuntu)
+name: CI Frontend (Ubuntu)
 
 on:
   push:
@@ -38,5 +38,5 @@ jobs:
           if npm run | grep -q 'e2e'; then
             npm run e2e
           else
-            echo "No e2e script defined—skipping."
+            echo "No e2e script defined-skipping."
           fi
